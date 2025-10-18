@@ -8,14 +8,16 @@
 #include <termios.h>
 #include <stdlib.h>
 #include <ctype.h>
+#include <errno.h>
 
-//Structs
+//data
 struct termios original_termios;
 
 
-//Function Declarations
+//Terminals
 void enableRawMode();
 void disableRawMode();
+void die(const char* s);
 
 
 #endif 

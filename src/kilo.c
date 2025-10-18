@@ -1,5 +1,6 @@
 #include "kilo.h"
 
+//  init
 int main()
 {
     enableRawMode();//Enable raw mode to disable echoing
@@ -8,7 +9,7 @@ int main()
     while (1)
     {
         char c = '\0';
-        read(STDIN_FILENO, &c, 1);
+        if(read(STDIN_FILENO, &c, 1) == 1 && errno != EAGAIN) die("read");
 
         if(iscntrl(c)) //Check if character is a control character
         {
@@ -23,9 +24,11 @@ int main()
     return 0;
 }
 
+
+//  terminals
 void enableRawMode()
 {
-    tcgetattr(STDIN_FILENO, &original_termios); //Get the current terminal attributes
+    if (tcgetattr(STDIN_FILENO, &original_termios) == -1) die("tcgetattr"); //Get current terminal attributes
     atexit(disableRawMode); //Ensure raw mode is disabled on exit
 
     struct termios raw = original_termios; //Make a copy to modify
@@ -38,10 +41,18 @@ void enableRawMode()
     raw.c_cc[VMIN] = 0;
     raw.c_cc[VTIME] = 1;
 
-    tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw); //Set the new attributes
+    if(tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw) == -1) die("tcsetattr"); //Set the new attributes
 }
 
 void disableRawMode()
 {
-    tcsetattr(STDIN_FILENO, TCSAFLUSH, &original_termios); //Restore original attributes
+    if(tcsetattr(STDIN_FILENO, TCSAFLUSH, &original_termios) == -1) die("tcsetattr"); //Restore original terminal attributes
+
 }
+void die(const char* s)
+{
+    perror(s);
+    exit(1);
+}
+
+

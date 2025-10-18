@@ -7,6 +7,7 @@
 #include <unistd.h>
 #include <termios.h>
 #include <stdlib.h>
+#include <ctype.h>
 
 //Structs
 struct termios original_termios;

@@ -1,2 +1,2 @@
 # Text-Editor
-A kilo text editor in C
+This is antirez’s kilo text editor that is written in C, follow a guide on https://viewsourcecode.org/snaptoken/kilo/index.html

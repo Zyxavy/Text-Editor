@@ -2,19 +2,25 @@
 
 int main()
 {
-    enableRawMode();
+    enableRawMode();//Enable raw mode to disable echoing
+
     char c;
-    while (read(STDIN_FILENO, &c, 1) == 1 && c != 'q');
+    while (read(STDIN_FILENO, &c, 1) == 1 && c != 'q'); //Read input until 'q' is pressed
     return 0;
 }
 
 void enableRawMode()
 {
-    struct termios raw;
+    tcgetattr(STDIN_FILENO, &original_termios); //Get the current terminal attributes
+    atexit(disableRawMode); //Ensure raw mode is disabled on exit
 
-    tcgetattr(STDIN_FILENO, &raw);
+    struct termios raw = original_termios; //Make a copy to modify
+    raw.c_lflag &= ~(ECHO | ICANON); //Disable echoing and canonical mode
 
-    raw.c_lflag &= ~(ECHO);
+    tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw); //Set the new attributes
+}
 
-    tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw);
+void disableRawMode()
+{
+    tcsetattr(STDIN_FILENO, TCSAFLUSH, &original_termios); //Restore original attributes
 }

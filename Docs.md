@@ -5,11 +5,18 @@
 Terminal attributes can be read into a termios struct by tcgetattr(). After modifying them, you can then apply them to the terminal using tcsetattr(). The TCSAFLUSH argument specifies when to apply the change: in this case, it waits for all pending output to be written to the terminal, and also discards any input that hasn’t been read.
 
 The c_lflag field is for “local flags”.
+
+The CTRL_KEY macro bitwise-ANDs a character with the value 00011111, in binary. 
+
+editorReadKey()’s job is to wait for one keypress, and return it.
+
+editorProcessKeypress() waits for a keypress, and then handles it. 
+
+The 4 in our write() call means we are writing 4 bytes out to the terminal. The first byte is \x1b, which is the escape character, or 27 in decimal. The other three bytes are [2J.
+
+"\x1[H" escape sequence is only 3 bytes long, and uses the H command (Cursor Position) to position the cursor.
 </p>
 
-Error handling
-
-First, we’ll add a die() function that prints an error message and exits the program.
 
 
 

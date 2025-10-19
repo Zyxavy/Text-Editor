@@ -5,7 +5,7 @@ struct editorConfig E;
 //  init
 void initEditor()
 {
-    if(getWindowSize(&E.screenRows, &E.screenCols) == -1) die("getWindowSize");
+    if(getWindowSize(&E.screenRows, &E.screenCols) == -1) die("getWindowSize");//Get terminal size
 }
 
 int main()
@@ -48,8 +48,8 @@ void disableRawMode()
 
 void die(const char* s)
 {   
-    write(STDOUT_FILENO, "\x1b[2J", 4);
-    write(STDOUT_FILENO, "\x1b[H", 3);
+    write(STDOUT_FILENO, "\x1b[2J", 4);//Clear screen
+    write(STDOUT_FILENO, "\x1b[H", 3);//Reposition cursor to top-left
 
 
     perror(s);
@@ -61,23 +61,22 @@ char editorReadKey()
     int nread;
     char c;
     
-    while ((nread = read(STDIN_FILENO, &c, 1)) != 1)
+    while ((nread = read(STDIN_FILENO, &c, 1)) != 1) //Read a single keypress
     {
-        if(nread == -1 && errno != EAGAIN) die("read");
+        if(nread == -1 && errno != EAGAIN) die("read");//On error, die
     }
     return c;
 }
 
-int getWindowSize(int *rows, int* *cols)
+int getWindowSize(int *rows, int *cols)
 {
     struct winsize ws;
 
-   if(1 || ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws) == -1 || ws.ws_col == 0)
+   if(ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws) == -1 || ws.ws_col == 0) //If ioctl fails
     {
-        if(write(STDOUT_FILENO, "x1b[999C\x1b[999B", 12) != 12) return -1;
-        
-        editorReadKey();
-        return -1; 
+        if(write(STDOUT_FILENO, "x1b[999C\x1b[999B", 12) != 12) return -1; //Move cursor to bottom-right
+
+        return getCursorPosition(rows, cols); 
     }
    else
     {
@@ -88,14 +87,35 @@ int getWindowSize(int *rows, int* *cols)
 
 }
 
+int getCursorPosition(int *rows, int *cols)
+{
+    char buffer[32];
+    unsigned int i = 0;
+
+    if(write(STDOUT_FILENO, "\x1b[6n", 4) != 4) return -1; //Request cursor position
+
+    while(i < sizeof(buffer) - 1)
+    {
+        if(read(STDIN_FILENO, &buffer[i], 1) != 1) break;
+        if(buffer[i] == 'R') break;
+        i++;
+    }
+    buffer[i] = '\0';
+
+    if(buffer[0] != '\x1b' || buffer[1] != '[') return -1;
+    if(sscanf(&buffer[2], "%d;%d", rows, cols) != 2) return -1;
+
+    return 0;
+}
+
 //  Input
 void editorProcessKeypress()
 {
     char c = editorReadKey();
     switch (c)
     {
-    case CTRL_KEY('q'):
-        write(STDOUT_FILENO, "\x1b[2J", 4);
+    case CTRL_KEY('q'): //Quit on Ctrl-Q
+        write(STDOUT_FILENO, "\x1b[2J", 4); 
         write(STDOUT_FILENO, "\x1[H", 3); 
         exit(0); 
         break;
@@ -117,7 +137,12 @@ void editorDrawRows()
     int y;
     for(y = 0; y < E.screenRows; y++)
     {
-        write(STDOUT_FILENO, ">\r\n", 3);
+        write(STDOUT_FILENO, ">", 1);
+
+        if(y < E.screenRows - 1) //Avoid adding a new line on the last row
+        {
+            write(STDOUT_FILENO, "\r\n", 2);
+        }
     }
 
 }

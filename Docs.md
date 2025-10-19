@@ -25,10 +25,8 @@ initEditor()’s job will be to initialize all the fields in the E struct.
 
 The C command (Cursor Forward) moves the cursor to the right, and the B command (Cursor Down) moves the cursor down. The argument says how much to move it right or down by. We use a very large value, 999, which should ensure that the cursor reaches the right and bottom edges of the screen.
 
+skip the first character in buf by passing &buf[1] to printf().
+
+sscanf() comes from <stdio.h>.
 
 </p>
-
-editorDrawRows()  draws a '>' in each row,
-created global editor struct
-initialize all fields with initEditor()
-Get the size of the window with getWindowSize()

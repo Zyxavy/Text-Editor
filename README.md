@@ -1,7 +1,32 @@
-# Text-Editor
-This is antirez’s kilo text editor that is written in C, followed a guide on https://viewsourcecode.org/snaptoken/kilo/index.html
+# Kilo Text Editor
 
+A lightweight, terminal-based text editor written in C, inspired by [antirez's kilo](https://github.com/antirez/kilo). This implementation follows the guide from [Build Your Own Text Editor](https://viewsourcecode.org/snaptoken/kilo/index.html).
+This project serves as an exercise in understanding low-level terminal handling, system calls, and the C programming language.
 
-----------------------------------
+## Requirements
 
-<p>Run the text editor with ./kilo or compile by runnig 'Make'</p>
+- C compiler (GCC recommended)
+- Unix-like system (Linux, macOS, BSD)
+- Terminal with ANSI escape code support
+
+## Compilation
+
+To compile the editor, simply run the make command in the project directory. This will use the provided Makefile to create an executable file named kilo.
+
+```bash
+make
+```
+
+## Running the Editor
+
+Once compiled, you can run the editor with the following command:
+
+```bash
+./kilo
+```
+
+## Credits
+
+- This project is an implementation of the editor from the "Build Your Own Text Editor" tutorial.
+- The original kilo editor was created by antirez.
+

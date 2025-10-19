@@ -1,49 +1,118 @@
-<h1>Incomplete Documentation</h1>
+# Incomplete Documentation
 
-<p>read() and STDIN_FILENO come from <unistd.h>. We are asking read() to read 1 byte from the standard input into the variable c, and to keep doing it until there are no more bytes to read. read() returns the number of bytes that it read, and will return 0 when it reaches the end of a file.
+## Kilo Technical Documentation>
 
-Terminal attributes can be read into a termios struct by tcgetattr(). After modifying them, you can then apply them to the terminal using tcsetattr(). The TCSAFLUSH argument specifies when to apply the change: in this case, it waits for all pending output to be written to the terminal, and also discards any input that hasn’t been read.
+This document provides a detailed explanation of the internal workings of the Kilo text editor. It covers terminal manipulation, input/output handling, and screen rendering.
 
-The c_lflag field is for “local flags”.
+### 1. Terminal Handling (termios.h)
 
-The CTRL_KEY macro bitwise-ANDs a character with the value 00011111, in binary. 
+The editor needs to precisely control the terminal's behavior. This is primarily achieved using the <termios.h> library.
 
-editorReadKey()’s job is to wait for one keypress, and return it.
+#### Raw Mode
 
-editorProcessKeypress() waits for a keypress, and then handles it. 
+By default, the terminal operates in "canonical mode" (or cooked mode), where keyboard input is processed line by line. To process each keypress as it happens, we must enable "raw mode".
+```
+enableRawMode():
+```
 
-The 4 in our write() call means we are writing 4 bytes out to the terminal. The first byte is \x1b, which is the escape character, or 27 in decimal. The other three bytes are [2J.
+1. Reads the current terminal attributes into a termios struct using tcgetattr(). A copy of these original attributes is saved.
 
-"\x1[H" escape sequence is only 3 bytes long, and uses the H command (Cursor Position) to position the cursor.
+2. Sets an atexit(disableRawMode) handler to ensure that even if the program crashes, the terminal settings are restored.
 
-editorDrawRows() will handle drawing each row of the buffer of text being edited.
+3. Modifies the termios struct to disable several flags:
 
-ioctl(), TIOCGWINSZ, and struct winsize come from <sys/ioctl.h>.
-ioctl() will place the number of columns wide and the number of rows high the terminal is into the given winsize struct. On failure, ioctl() returns -1.
+- ECHO: Prevents keys from being printed to the terminal as they are typed.
 
-initEditor()’s job will be to initialize all the fields in the E struct.
+- ICANON: Disables canonical mode, allowing us to read input byte-by-byte.
 
-The C command (Cursor Forward) moves the cursor to the right, and the B command (Cursor Down) moves the cursor down. The argument says how much to move it right or down by. We use a very large value, 999, which should ensure that the cursor reaches the right and bottom edges of the screen.
+- ISIG: Disables signals like Ctrl-C (SIGINT) and Ctrl-Z (SIGTSTP).
 
-skip the first character in buf by passing &buf[1] to printf().
+- IXON: Disables software flow control (Ctrl-S and Ctrl-Q).
 
-sscanf() comes from <stdio.h>.
+- IEXTEN: Disables Ctrl-V.
 
-ABUF_INIT constant represents an empty buffer. This acts as a constructor for our appendbuff type.
+- ICRNL: Prevents the terminal from translating carriage returns (\r) into newlines (\n).
 
-realloc() and free() come from <stdlib.h>. memcpy() comes from <string.h>.
+- OPOST: Disables all output processing, preventing translation of \n to \r\n.
 
-[?25l escape sequences tell the terminal to hide and show the cursor. The h and l commands (Set Mode, Reset Mode) are used to turn on and turn off various terminal features or “modes”. 
+4. Applies the modified attributes to the terminal using tcsetattr(). The TCSAFLUSH argument ensures the changes are applied after all pending output is written and any unread input is discarded.
 
-snprintf() comes from <stdio.h>.
+- disableRawMode(): This function is called on exit to restore the terminal's original attributes, ensuring the user's shell works correctly after the editor closes.
 
-We use the welcome buffer and snprintf() to interpolate our KILO_VERSION string into the welcome message. 
+### 2. Input Processing
 
-To center a string, you divide the screen width by 2, and then subtract half of the string’s length from that. In other words: E.screencols/2 - welcomelen/2, which simplifies to (E.screencols - welcomelen) / 2
+#### Reading Keystrokes
 
-E.cx is the horizontal coordinate of the cursor (the column) and E.cy is the vertical coordinate (the row).
-</p>
+- editorReadKey(): This function waits for a single keypress and returns it. It uses read() from <unistd.h> to read 1 byte from standard input. It loops until a byte is read, handling potential errors.
 
-Added a welcome message and centers it
+- editorProcessKeypress(): This function calls editorReadKey() and then uses a switch statement to handle the input. Currently, it handles Ctrl-Q to exit and w/a/s/d for cursor movement.
 
-also moves the cursor around
+- CTRL_KEY(k) Macro: This macro simulates the Ctrl key modifier. It works by performing a bitwise-AND with 0x1f (binary 00011111), which sets the upper 3 bits of the character's byte to 0. This mimics how the Ctrl key was traditionally handled in terminals.
+
+### 3. Screen Rendering and Output
+
+To avoid screen flicker and perform efficient updates, the editor builds the entire screen content in memory before writing it to the terminal in a single operation.
+
+#### The Append Buffer (struct appendbuff)
+
+This dynamic string structure is used to buffer all the output.
+
+- abAppend(ab, s, len): Appends a string s of length len to the buffer. It uses realloc() to resize the memory block holding the buffer's content.
+
+- abFree(ab): Frees the memory allocated for the buffer.
+
+#### VT100 Escape Sequences
+
+The editor uses standard VT100 escape sequences to control the terminal's cursor and appearance. These are special character sequences that start with \x1b (the escape character).
+
+- \x1b[2J: Clear the entire screen.
+
+- \x1b[K: Clear the current line from the cursor to the end.
+
+- \x1b[H: Position the cursor at the top-left corner (home position).
+
+- \x1b[?25l: Hide the cursor.
+
+- \x1b[?25h: Show the cursor.
+
+- \x1b[<row>;<col>H: Position the cursor at a specific row and col.
+
+#### The Rendering (editorRefreshScreen)
+
+This is the main rendering function, called in the main loop.
+
+1. Initializes an append buffer ab.
+
+2. Hides the cursor (\x1b[?25l) to prevent it from flickering during the redraw.
+
+3. Positions the cursor at the home position (\x1b[H).
+
+4. Calls editorDrawRows() to draw the content of the screen into the buffer.
+
+5. Calculates the new cursor position and generates the escape sequence to move it there (\x1b[<E.curY + 1>;<E.curX + 1>H).
+
+6. Shows the cursor again (\x1b[?25h).
+
+7. Writes the entire content of the append buffer to standard output with a single write() call.
+
+8. Frees the append buffer.
+
+### 4. Window Size and Cursor Position
+
+The editor must know the dimensions of the terminal window to render correctly.
+
+- getWindowSize():
+
+1. The primary method is to use ioctl() with TIOCGWINSZ. This system call fills a winsize struct with the number of rows and columns.
+
+2. If ioctl() fails, it uses a fallback method: it moves the cursor to the bottom-right of the screen (\x1b[999C\x1b[999B) and then queries the cursor's position.
+
+- getCursorPosition(): This function is the fallback for getWindowSize().
+
+1. It writes an escape sequence (\x1b[6n) that asks the terminal to report its cursor position.
+
+2. It then reads the response from standard input, which is formatted as \x1b[<rows>;<cols>R.
+
+3. It parses this response using sscanf() to extract the row and column numbers.
+
+.....

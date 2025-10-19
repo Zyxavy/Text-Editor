@@ -1,9 +1,17 @@
 #include "kilo.h"
 
+struct editorConfig E;
+
 //  init
+void initEditor()
+{
+    if(getWindowSize(&E.screenRows, &E.screenCols) == -1) die("getWindowSize");
+}
+
 int main()
 {
     enableRawMode();//Enable raw mode to disable echoing
+    initEditor();
 
     while (1)
     {
@@ -16,10 +24,10 @@ int main()
 //  terminals
 void enableRawMode()
 {
-    if (tcgetattr(STDIN_FILENO, &original_termios) == -1) die("tcgetattr"); //Get current terminal attributes
+    if (tcgetattr(STDIN_FILENO, &E.original_termios) == -1) die("tcgetattr"); //Get current terminal attributes
     atexit(disableRawMode); //Ensure raw mode is disabled on exit
 
-    struct termios raw = original_termios; //Make a copy to modify
+    struct termios raw = E.original_termios; //Make a copy to modify
     
     //Modify the terminal attributes to enable raw mode
     raw.c_iflag &= ~(ICRNL | IXON | BRKINT | INPCK | ISTRIP); 
@@ -34,7 +42,7 @@ void enableRawMode()
 
 void disableRawMode()
 {
-    if(tcsetattr(STDIN_FILENO, TCSAFLUSH, &original_termios) == -1) die("tcsetattr"); //Restore original terminal attributes
+    if(tcsetattr(STDIN_FILENO, TCSAFLUSH, &E.original_termios) == -1) die("tcsetattr"); //Restore original terminal attributes
 
 }
 
@@ -60,6 +68,26 @@ char editorReadKey()
     return c;
 }
 
+int getWindowSize(int *rows, int* *cols)
+{
+    struct winsize ws;
+
+   if(1 || ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws) == -1 || ws.ws_col == 0)
+    {
+        if(write(STDOUT_FILENO, "x1b[999C\x1b[999B", 12) != 12) return -1;
+        
+        editorReadKey();
+        return -1; 
+    }
+   else
+    {
+        *cols = ws.ws_col;
+        *rows = ws.ws_row;
+        return 0;
+    }
+
+}
+
 //  Input
 void editorProcessKeypress()
 {
@@ -79,5 +107,17 @@ void editorRefreshScreen()
 {
     write(STDOUT_FILENO, "\x1b[2J", 4);
     write(STDOUT_FILENO, "\x1[H", 3);
+
+    editorDrawRows();
+    write(STDOUT_FILENO, "\x1b[H", 3);
 }
 
+void editorDrawRows()
+{
+    int y;
+    for(y = 0; y < E.screenRows; y++)
+    {
+        write(STDOUT_FILENO, ">\r\n", 3);
+    }
+
+}

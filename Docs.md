@@ -15,8 +15,20 @@ editorProcessKeypress() waits for a keypress, and then handles it.
 The 4 in our write() call means we are writing 4 bytes out to the terminal. The first byte is \x1b, which is the escape character, or 27 in decimal. The other three bytes are [2J.
 
 "\x1[H" escape sequence is only 3 bytes long, and uses the H command (Cursor Position) to position the cursor.
+
+editorDrawRows() will handle drawing each row of the buffer of text being edited.
+
+ioctl(), TIOCGWINSZ, and struct winsize come from <sys/ioctl.h>.
+ioctl() will place the number of columns wide and the number of rows high the terminal is into the given winsize struct. On failure, ioctl() returns -1.
+
+initEditor()’s job will be to initialize all the fields in the E struct.
+
+The C command (Cursor Forward) moves the cursor to the right, and the B command (Cursor Down) moves the cursor down. The argument says how much to move it right or down by. We use a very large value, 999, which should ensure that the cursor reaches the right and bottom edges of the screen.
+
+
 </p>
 
-
-
-
+editorDrawRows()  draws a '>' in each row,
+created global editor struct
+initialize all fields with initEditor()
+Get the size of the window with getWindowSize()

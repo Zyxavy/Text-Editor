@@ -34,6 +34,16 @@ ABUF_INIT constant represents an empty buffer. This acts as a constructor for ou
 realloc() and free() come from <stdlib.h>. memcpy() comes from <string.h>.
 
 [?25l escape sequences tell the terminal to hide and show the cursor. The h and l commands (Set Mode, Reset Mode) are used to turn on and turn off various terminal features or “modes”. 
+
+snprintf() comes from <stdio.h>.
+
+We use the welcome buffer and snprintf() to interpolate our KILO_VERSION string into the welcome message. 
+
+To center a string, you divide the screen width by 2, and then subtract half of the string’s length from that. In other words: E.screencols/2 - welcomelen/2, which simplifies to (E.screencols - welcomelen) / 2
+
+E.cx is the horizontal coordinate of the cursor (the column) and E.cy is the vertical coordinate (the row).
 </p>
 
-append and free buffer struct and hide the cursor when repainting
+Added a welcome message and centers it
+
+also moves the cursor around

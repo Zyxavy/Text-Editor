@@ -14,10 +14,12 @@
 //Defines
 #define CTRL_KEY(k) ((k) & 0x1f)
 #define ABUF_INIT {NULL, 0}
+#define KILO_VERSION "0.0.1"
 
 //data
 struct editorConfig
 {
+    int curX, curY;
     int screenRows;
     int screenCols;
     struct termios original_termios;
@@ -44,6 +46,7 @@ void abFree(struct appendbuff *ab);
 
 //Input
 void editorProcessKeypress();
+void editorMoveCursor(char key);
 
 //Output
 void editorRefreshScreen();

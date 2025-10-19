@@ -5,7 +5,11 @@ struct editorConfig E;
 //  #===Init===#
 void initEditor()
 {
+    E.curX = 0;
+    E.curY = 0;
+
     if(getWindowSize(&E.screenRows, &E.screenCols) == -1) die("getWindowSize");//Get terminal size
+
 }
 
 int main()
@@ -133,34 +137,75 @@ void editorProcessKeypress()
         write(STDOUT_FILENO, "\x1[H", 3); 
         exit(0); 
         break;
+    
+    case 'w':
+    case 's':
+    case 'a':
+    case 'd':
+        editorMoveCursor(c);
+        break;
+    }
+}
+
+void editorMoveCursor(char key)
+{
+    switch (key)
+    {
+    case 'a': E.curX--; break;
+    case 'd': E.curY++; break;
+    case 'w': E.curY--; break;
+    case 's': E.curY++; break;
     }
 }
 
 //  #===Output===#
 void editorRefreshScreen()
 {
-    struct appendbuff ab = ABUF_INIT;
+    struct appendbuff ab = ABUF_INIT; //Initialize append buffer
 
-    abAppend(&ab, "\x1b[?25l", 6);
-    abAppend(&ab, "\x1b[2J", 4);
-    abAppend(&ab, "\x1b[H", 3);
+    abAppend(&ab, "\x1b[?25l", 6); //Hide cursor
+    abAppend(&ab, "\x1b[H", 3); //Reposition cursor to top-left
 
-    editorDrawRows(&ab);
+    editorDrawRows(&ab); //Draw rows
 
-    abAppend(&ab, "x1b[H", 3);
-    abAppend(&ab, "\x1b[?25l", 6);
+    char buffer[32];
+    snprintf(buffer, sizeof(buffer), "\x1b[%d;%dH", E.curY + 1, E.curX + 1); //Reposition cursor
+    abAppend(&ab, buffer, strlen(buffer)); //Append cursor position command
 
-    write(STDOUT_FILENO, ab.b, ab.len);
+    abAppend(&ab, "\x1b[?25h", 6);
+
+    write(STDOUT_FILENO, ab.b, ab.len); //Write buffer to stdout
     abFree(&ab);
 }
 
 void editorDrawRows(struct appendbuff *ab)
 {
     int y;
-    for(y = 0; y < E.screenRows; y++)
+    for(y = 0; y < E.screenRows; y++) //For each row
     {
-        abAppend(ab, ">", 1);
+        if(y == E.screenRows / 3) //Display welcome message on one-third down the screen
+        {
+            char welcome[80];
+            int welcomeLen = snprintf(welcome, sizeof(welcome), "Kilo editor -- version %s", KILO_VERSION);
 
+            if(welcomeLen > E.screenCols) welcomeLen = E.screenCols; //Trim if too long
+            int padding = (E.screenCols - welcomeLen) / 2; //Calculate left padding
+
+            if(padding)
+            {
+                abAppend(ab, ">", 1);
+                padding--;
+            }
+            while(padding--) abAppend(ab, " ", 1); //Add left padding
+
+            abAppend(ab, welcome, welcomeLen);
+        }
+        else
+        {
+            abAppend(ab, ">", 1);
+        }
+
+        abAppend(ab, "\x1b[K", 3);//Clear line
         if(y < E.screenRows - 1) //Avoid adding a new line on the last row
         {
             abAppend(ab, "\r\n", 2);
@@ -168,3 +213,6 @@ void editorDrawRows(struct appendbuff *ab)
     }
 
 }
+
+
+//To be implemented: Arrow Keys

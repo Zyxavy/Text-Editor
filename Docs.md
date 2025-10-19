@@ -29,4 +29,11 @@ skip the first character in buf by passing &buf[1] to printf().
 
 sscanf() comes from <stdio.h>.
 
+ABUF_INIT constant represents an empty buffer. This acts as a constructor for our appendbuff type.
+
+realloc() and free() come from <stdlib.h>. memcpy() comes from <string.h>.
+
+[?25l escape sequences tell the terminal to hide and show the cursor. The h and l commands (Set Mode, Reset Mode) are used to turn on and turn off various terminal features or “modes”. 
 </p>
+
+append and free buffer struct and hide the cursor when repainting

@@ -2,7 +2,7 @@
 
 struct editorConfig E;
 
-//  init
+//  #===Init===#
 void initEditor()
 {
     if(getWindowSize(&E.screenRows, &E.screenCols) == -1) die("getWindowSize");//Get terminal size
@@ -21,7 +21,7 @@ int main()
     return 0;
 }
 
-//  terminals
+//  #===Terminals===#
 void enableRawMode()
 {
     if (tcgetattr(STDIN_FILENO, &E.original_termios) == -1) die("tcgetattr"); //Get current terminal attributes
@@ -50,7 +50,6 @@ void die(const char* s)
 {   
     write(STDOUT_FILENO, "\x1b[2J", 4);//Clear screen
     write(STDOUT_FILENO, "\x1b[H", 3);//Reposition cursor to top-left
-
 
     perror(s);
     exit(1);
@@ -94,21 +93,36 @@ int getCursorPosition(int *rows, int *cols)
 
     if(write(STDOUT_FILENO, "\x1b[6n", 4) != 4) return -1; //Request cursor position
 
-    while(i < sizeof(buffer) - 1)
+    while(i < sizeof(buffer) - 1) 
     {
-        if(read(STDIN_FILENO, &buffer[i], 1) != 1) break;
+        if(read(STDIN_FILENO, &buffer[i], 1) != 1) break; //On error, break
         if(buffer[i] == 'R') break;
         i++;
     }
     buffer[i] = '\0';
 
-    if(buffer[0] != '\x1b' || buffer[1] != '[') return -1;
-    if(sscanf(&buffer[2], "%d;%d", rows, cols) != 2) return -1;
+    if(buffer[0] != '\x1b' || buffer[1] != '[') return -1; //Invalid response
+    if(sscanf(&buffer[2], "%d;%d", rows, cols) != 2) return -1;//Parse rows and cols
 
     return 0;
 }
 
-//  Input
+// #===Append Buffer===# 
+void abAppend(struct appendbuff *ab, const char *s, int len)
+{
+    char *new = realloc(ab->b, ab->len + len); //Resize buffer
+
+    if(new == NULL) return;
+    memcpy(&new[ab->len], s, len); //Append new data
+    ab->b = new;
+    ab->len += len;
+}
+
+void abFree(struct appendbuff *ab)
+{
+    free(ab->b);
+}
+//  #===Input===#
 void editorProcessKeypress()
 {
     char c = editorReadKey();
@@ -122,26 +136,34 @@ void editorProcessKeypress()
     }
 }
 
-//  Output
+//  #===Output===#
 void editorRefreshScreen()
 {
-    write(STDOUT_FILENO, "\x1b[2J", 4);
-    write(STDOUT_FILENO, "\x1[H", 3);
+    struct appendbuff ab = ABUF_INIT;
 
-    editorDrawRows();
-    write(STDOUT_FILENO, "\x1b[H", 3);
+    abAppend(&ab, "\x1b[?25l", 6);
+    abAppend(&ab, "\x1b[2J", 4);
+    abAppend(&ab, "\x1b[H", 3);
+
+    editorDrawRows(&ab);
+
+    abAppend(&ab, "x1b[H", 3);
+    abAppend(&ab, "\x1b[?25l", 6);
+
+    write(STDOUT_FILENO, ab.b, ab.len);
+    abFree(&ab);
 }
 
-void editorDrawRows()
+void editorDrawRows(struct appendbuff *ab)
 {
     int y;
     for(y = 0; y < E.screenRows; y++)
     {
-        write(STDOUT_FILENO, ">", 1);
+        abAppend(ab, ">", 1);
 
         if(y < E.screenRows - 1) //Avoid adding a new line on the last row
         {
-            write(STDOUT_FILENO, "\r\n", 2);
+            abAppend(ab, "\r\n", 2);
         }
     }
 

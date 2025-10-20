@@ -31,12 +31,18 @@ struct appendbuff
     int len;
 };
 
+enum editorKey {
+    ARROW_UP = 1000, 
+    ARROW_DOWN,
+    ARROW_LEFT, 
+    ARROW_RIGHT
+};
 
 //Terminals
 void enableRawMode();
 void disableRawMode();
 void die(const char* s);
-char editorReadKey();
+int editorReadKey();
 int getWindowSize(int *rows, int *cols);
 int getCursorPosition(int *rows, int *cols);
 
@@ -46,7 +52,7 @@ void abFree(struct appendbuff *ab);
 
 //Input
 void editorProcessKeypress();
-void editorMoveCursor(char key);
+void editorMoveCursor(int key);
 
 //Output
 void editorRefreshScreen();

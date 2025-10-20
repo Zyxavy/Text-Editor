@@ -59,7 +59,7 @@ void die(const char* s)
     exit(1);
 }
 
-char editorReadKey()
+int editorReadKey()
 {
     int nread;
     char c;
@@ -68,7 +68,31 @@ char editorReadKey()
     {
         if(nread == -1 && errno != EAGAIN) die("read");//On error, die
     }
-    return c;
+    
+    if(c == '\x1b') //If an esape sequence,
+    {
+        char seqBuffer[3];
+
+        if(read(STDIN_FILENO, &seqBuffer[0], 1) != 1) return '\x1b';
+        if(read(STDIN_FILENO, &seqBuffer[1], 1) != 1) return '\x1b';
+
+        if(seqBuffer[0] == '[') //if Arrow keys
+        {
+            switch (seqBuffer[1])
+            {
+            case 'A': return ARROW_UP;
+            case 'B': return ARROW_DOWN;
+            case 'C': return ARROW_RIGHT;
+            case 'D': return ARROW_LEFT;
+            }
+        }
+
+        return '\x1b';
+    } 
+    else
+    {
+        return c;
+    }
 }
 
 int getWindowSize(int *rows, int *cols)
@@ -129,7 +153,7 @@ void abFree(struct appendbuff *ab)
 //  #===Input===#
 void editorProcessKeypress()
 {
-    char c = editorReadKey();
+    int c = editorReadKey();
     switch (c)
     {
     case CTRL_KEY('q'): //Quit on Ctrl-Q
@@ -138,23 +162,23 @@ void editorProcessKeypress()
         exit(0); 
         break;
     
-    case 'w':
-    case 's':
-    case 'a':
-    case 'd':
+    case ARROW_LEFT: 
+    case ARROW_RIGHT: 
+    case ARROW_UP: 
+    case ARROW_DOWN:
         editorMoveCursor(c);
         break;
     }
 }
 
-void editorMoveCursor(char key)
+void editorMoveCursor(int key)
 {
     switch (key)
     {
-    case 'a': E.curX--; break;
-    case 'd': E.curY++; break;
-    case 'w': E.curY--; break;
-    case 's': E.curY++; break;
+    case ARROW_LEFT: E.curX--; break;
+    case ARROW_RIGHT: E.curY++; break;
+    case ARROW_UP: E.curY--; break;
+    case ARROW_DOWN: E.curY++; break;
     }
 }
 
@@ -213,6 +237,3 @@ void editorDrawRows(struct appendbuff *ab)
     }
 
 }
-
-
-//To be implemented: Arrow Keys

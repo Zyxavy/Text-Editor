@@ -117,4 +117,4 @@ The editor must know the dimensions of the terminal window to render correctly.
 
 .....
 
-Mapped Arrow keys to move cursor
+implemented Page up and Page down key, Home key and End key, as well as Del key.

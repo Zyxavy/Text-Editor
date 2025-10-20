@@ -35,7 +35,12 @@ enum editorKey {
     ARROW_UP = 1000, 
     ARROW_DOWN,
     ARROW_LEFT, 
-    ARROW_RIGHT
+    ARROW_RIGHT,
+    PAGE_UP,
+    PAGE_DOWN,
+    HOME_KEY,
+    END_KEY,
+    DELETE_KEY
 };
 
 //Terminals

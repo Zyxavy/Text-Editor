@@ -7,6 +7,8 @@ void initEditor()
 {
     E.curX = 0;
     E.curY = 0;
+    E.rowOffset = 0;
+    E.colOffset = 0;
     E.numRows = 0;
     E.row = NULL;
 
@@ -233,10 +235,7 @@ void editorMoveCursor(int key)
         }
         break;
     case ARROW_RIGHT: 
-        if(E.curX != E.screenCols - 1)
-        {
-            E.curX++; 
-        }
+        E.curX++; 
         break;
     case ARROW_UP: 
         if(E.curY !=  0)
@@ -245,7 +244,7 @@ void editorMoveCursor(int key)
         }
         break;
     case ARROW_DOWN: 
-        if(E.curY != E.screenRows - 1)
+        if(E.curY < E.numRows)
         {
             E.curY++; 
         }
@@ -256,6 +255,8 @@ void editorMoveCursor(int key)
 //  #===Output===#
 void editorRefreshScreen()
 {
+    editorScroll();
+
     struct appendbuff ab = ABUF_INIT; //Initialize append buffer
 
     abAppend(&ab, "\x1b[?25l", 6); //Hide cursor
@@ -264,7 +265,7 @@ void editorRefreshScreen()
     editorDrawRows(&ab); //Draw rows
 
     char buffer[32];
-    snprintf(buffer, sizeof(buffer), "\x1b[%d;%dH", E.curY + 1, E.curX + 1); //Reposition cursor
+    snprintf(buffer, sizeof(buffer), "\x1b[%d;%dH", (E.curY - E.rowOffset) + 1, (E.curX - E.colOffset) + 1); //Reposition cursor
     abAppend(&ab, buffer, strlen(buffer)); //Append cursor position command
 
     abAppend(&ab, "\x1b[?25h", 6);
@@ -278,7 +279,8 @@ void editorDrawRows(struct appendbuff *ab)
     int y;
     for(y = 0; y < E.screenRows; y++) //For each row
     {
-        if(y >= E.numRows)
+        int fileRow = y + E.rowOffset;
+        if(fileRow >= E.numRows)
         {
             if(E.numRows == 0 && y == E.screenRows / 3) //Display welcome message on one-third down the screen
             {
@@ -304,9 +306,10 @@ void editorDrawRows(struct appendbuff *ab)
         }
         else
         {
-            int len = E.row[y].size;
+            int len = E.row[fileRow].size - E.colOffset;
+            if(len < 0) len = 0;
             if(len > E.screenCols) len = E.screenCols;
-            abAppend(ab, E.row[y].chars, len );
+            abAppend(ab, &E.row[fileRow].chars[E.colOffset], len);
         }
         abAppend(ab, "\x1b[K", 3);//Clear line
         if(y < E.screenRows - 1) //Avoid adding a new line on the last row
@@ -315,6 +318,26 @@ void editorDrawRows(struct appendbuff *ab)
         }
     }
 
+}
+
+void editorScroll()
+{
+    if(E.curY < E.rowOffset)
+    {
+        E.rowOffset = E.curY;
+    }
+    if(E.curY >= E.rowOffset + E.screenRows)
+    {
+        E.rowOffset = E.curY - E.screenRows + 1;
+    }
+    if(E.curX < E.colOffset)
+    {
+        E.colOffset = E.curX;
+    }
+    if(E.curX >= E.colOffset + E.screenCols)
+    {
+        E.colOffset = E.curX - E.screenCols + 1;
+    }
 }
 
 // #===File I/O===#

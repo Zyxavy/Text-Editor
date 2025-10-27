@@ -32,6 +32,8 @@ typedef struct erow
 struct editorConfig
 {
     int curX, curY;
+    int rowOffset;
+    int colOffset;
     int screenRows;
     int screenCols;
     int numRows;
@@ -77,6 +79,7 @@ void editorMoveCursor(int key);
 //Output
 void editorRefreshScreen();
 void editorDrawRows();
+void editorScroll();
 
 //File i/o
 void editorOpen(char *fileName);

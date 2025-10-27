@@ -145,7 +145,7 @@ int getWindowSize(int *rows, int *cols)
     }
    else
     {
-        *cols = ws.ws_col;
+        *cols = ws.ws_col; //Set columns and rows
         *rows = ws.ws_row;
         return 0;
     }
@@ -200,18 +200,18 @@ void editorProcessKeypress()
             exit(0); 
             break;
 
-        case HOME_KEY:
+        case HOME_KEY: //Go to beginning of line
             E.curX = 0;
             break;
-        case END_KEY:
+        case END_KEY: //Go to end of line
             E.curX = E.screenCols - 1;
             break;
         
-        case PAGE_UP:
+        case PAGE_UP: 
         case PAGE_DOWN:
             {
                 int times = E.screenRows;
-                while(times--) editorMoveCursor(c == PAGE_UP ? ARROW_UP : ARROW_DOWN);
+                while(times--) editorMoveCursor(c == PAGE_UP ? ARROW_UP : ARROW_DOWN); //Move cursor up or down by screen rows
             }
             break;
 
@@ -226,6 +226,8 @@ void editorProcessKeypress()
 
 void editorMoveCursor(int key)
 {
+    erow *row = (E.curY >= E.numRows) ? NULL : &E.row[E.curY];
+
     switch (key)
     {
     case ARROW_LEFT: 
@@ -235,7 +237,10 @@ void editorMoveCursor(int key)
         }
         break;
     case ARROW_RIGHT: 
-        E.curX++; 
+        if(row && E.curX < row->size)
+        {
+        E.curX++;
+        } 
         break;
     case ARROW_UP: 
         if(E.curY !=  0)
@@ -249,6 +254,13 @@ void editorMoveCursor(int key)
             E.curY++; 
         }
         break;
+    }
+
+    row = (E.curY >= E.numRows) ? NULL : &E.row[E.curY];
+    int rowLen = row ? row->size : 0;
+    if(E.curX > rowLen)
+    {
+        E.curX = rowLen;
     }
 }
 
@@ -290,9 +302,9 @@ void editorDrawRows(struct appendbuff *ab)
                 if(welcomeLen > E.screenCols) welcomeLen = E.screenCols; //Trim if too long
                 int padding = (E.screenCols - welcomeLen) / 2; //Calculate left padding
 
-                if(padding)
+                if(padding) //Add '>' before welcome message
                 {
-                    abAppend(ab, ">", 1);
+                    abAppend(ab, ">", 1); 
                     padding--;
                 }
                 while(padding--) abAppend(ab, " ", 1); //Add left padding
@@ -343,32 +355,32 @@ void editorScroll()
 // #===File I/O===#
 void editorOpen(char *fileName)
 {
-    FILE *fp = fopen(fileName, "r");
+    FILE *fp = fopen(fileName, "r"); //Open file for reading, if fails then call 'die'
     if(!fp) die("fopen");
 
     char *line = NULL;
     size_t lineCap = 0;
     ssize_t lineLen;
-    while ((lineLen = getline(&line, &lineCap, fp)) != 1)
+    while ((lineLen = getline(&line, &lineCap, fp)) != 1) //Read each line
     {
         while(lineLen > 0 && (line[lineLen - 1] == '\n' || line[lineLen - 1] == '\r')) //Trim newline characters
         {
-            lineLen--;
+            lineLen--; 
         }
-        editorAppendRow(line, lineLen);
+        editorAppendRow(line, lineLen);//Append row to editor
     } 
     free(line);
-    fclose(fp);
+    fclose(fp); //Close file
 }
 
 void editorAppendRow(char *s, size_t len)
 {
-    E.row = realloc(E.row, sizeof(erow) * (E.numRows + 1));
+    E.row = realloc(E.row, sizeof(erow) * (E.numRows + 1)); //Resize row array to fit new row
 
-    int at =  E.numRows;
-    E.row[at].size = len;
-    E.row[at].chars = malloc(len + 1);
-    memcpy(E.row[at].chars, s, len);
-    E.row[at].chars[len] = '\0';
-    E.numRows++;
+    int at =  E.numRows; //Index of new row
+    E.row[at].size = len; //Set size of new row
+    E.row[at].chars = malloc(len + 1); //Allocate memory for row characters
+    memcpy(E.row[at].chars, s, len); //Copy characters into row
+    E.row[at].chars[len] = '\0'; //Null-terminate the string
+    E.numRows++; //Increment number of rows
 }

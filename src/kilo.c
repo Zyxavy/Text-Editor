@@ -8,6 +8,7 @@ void initEditor()
     E.curX = 0;
     E.curY = 0;
     E.numRows = 0;
+    E.row = NULL;
 
     if(getWindowSize(&E.screenRows, &E.screenCols) == -1) die("getWindowSize");//Get terminal size
 
@@ -303,9 +304,9 @@ void editorDrawRows(struct appendbuff *ab)
         }
         else
         {
-            int len = E.row.size;
+            int len = E.row[y].size;
             if(len > E.screenCols) len = E.screenCols;
-            abAppend(ab, E.row.chars, len );
+            abAppend(ab, E.row[y].chars, len );
         }
         abAppend(ab, "\x1b[K", 3);//Clear line
         if(y < E.screenRows - 1) //Avoid adding a new line on the last row
@@ -325,19 +326,26 @@ void editorOpen(char *fileName)
     char *line = NULL;
     size_t lineCap = 0;
     ssize_t lineLen;
-    lineLen = getline(&line, &lineCap, fp);
-    if(lineLen != -1)
+    while ((lineLen = getline(&line, &lineCap, fp)) != 1)
     {
         while(lineLen > 0 && (line[lineLen - 1] == '\n' || line[lineLen - 1] == '\r')) //Trim newline characters
         {
             lineLen--;
         }
-        E.row.size = lineLen;
-        E.row.chars = malloc(lineLen + 1);
-        memcpy(E.row.chars, line, lineLen);
-        E.row.chars[lineLen] = '\0';
-        E.numRows = 1;
-    }
+        editorAppendRow(line, lineLen);
+    } 
     free(line);
     fclose(fp);
+}
+
+void editorAppendRow(char *s, size_t len)
+{
+    E.row = realloc(E.row, sizeof(erow) * (E.numRows + 1));
+
+    int at =  E.numRows;
+    E.row[at].size = len;
+    E.row[at].chars = malloc(len + 1);
+    memcpy(E.row[at].chars, s, len);
+    E.row[at].chars[len] = '\0';
+    E.numRows++;
 }

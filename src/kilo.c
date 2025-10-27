@@ -13,11 +13,14 @@ void initEditor()
 
 }
 
-int main()
+int main(int argc, char*argv[])
 {
     enableRawMode();//Enable raw mode to disable echoing
     initEditor();
-    editorOpen();
+    if(argc >= 2)
+    {
+        editorOpen(argv[1]);
+    }
 
     while (1)
     {
@@ -276,7 +279,7 @@ void editorDrawRows(struct appendbuff *ab)
     {
         if(y >= E.numRows)
         {
-            if(y == E.screenRows / 3) //Display welcome message on one-third down the screen
+            if(E.numRows == 0 && y == E.screenRows / 3) //Display welcome message on one-third down the screen
             {
                 char welcome[80];
                 int welcomeLen = snprintf(welcome, sizeof(welcome), "Kilo editor -- version %s", KILO_VERSION);
@@ -314,14 +317,27 @@ void editorDrawRows(struct appendbuff *ab)
 }
 
 // #===File I/O===#
-void editorOpen()
+void editorOpen(char *fileName)
 {
-    char *line = "World, Hello!";
-    ssize_t lineLen = 13;
+    FILE *fp = fopen(fileName, "r");
+    if(!fp) die("fopen");
 
-    E.row.size = lineLen;
-    E.row.chars = malloc(lineLen + 1);
-    memcpy(E.row.chars, line, lineLen);
-    E.row.chars[lineLen] = '\0';
-    E.numRows = 1;
+    char *line = NULL;
+    size_t lineCap = 0;
+    ssize_t lineLen;
+    lineLen = getline(&line, &lineCap, fp);
+    if(lineLen != -1)
+    {
+        while(lineLen > 0 && (line[lineLen - 1] == '\n' || line[lineLen - 1] == '\r')) //Trim newline characters
+        {
+            lineLen--;
+        }
+        E.row.size = lineLen;
+        E.row.chars = malloc(lineLen + 1);
+        memcpy(E.row.chars, line, lineLen);
+        E.row.chars[lineLen] = '\0';
+        E.numRows = 1;
+    }
+    free(line);
+    fclose(fp);
 }

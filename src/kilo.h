@@ -1,6 +1,11 @@
 #ifndef KILO_H
 #define KILO_H
 
+//Feature test macros
+#define _DEFAULT_SOURCE
+#define _BSD_SOURCE
+#define _GNU_SOURCE
+
 //Headers
 #include <stdio.h>
 #include <unistd.h>
@@ -18,6 +23,12 @@
 #define KILO_VERSION "0.0.1"
 
 //data
+typedef struct erow
+{
+    int size;
+    char *chars;
+} erow;
+
 struct editorConfig
 {
     int curX, curY;
@@ -46,12 +57,6 @@ enum editorKey {
     DELETE_KEY
 };
 
-typedef struct erow
-{
-    int size;
-    char *chars;
-} erow;
-
 
 //Terminals
 void enableRawMode();
@@ -74,6 +79,6 @@ void editorRefreshScreen();
 void editorDrawRows();
 
 //File i/o
-void editorOpen();
+void editorOpen(char *fileName);
 
 #endif 

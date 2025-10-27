@@ -116,5 +116,3 @@ The editor must know the dimensions of the terminal window to render correctly.
 3. It parses this response using sscanf() to extract the row and column numbers.
 
 .....
-
-implemented Page up and Page down key, Home key and End key, as well as Del key.

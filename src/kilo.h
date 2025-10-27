@@ -10,6 +10,7 @@
 #include <errno.h>
 #include <sys/ioctl.h>
 #include <string.h>
+#include <sys/types.h>
 
 //Defines
 #define CTRL_KEY(k) ((k) & 0x1f)
@@ -22,6 +23,8 @@ struct editorConfig
     int curX, curY;
     int screenRows;
     int screenCols;
+    int numRows;
+    erow row;
     struct termios original_termios;
 };
 
@@ -43,6 +46,13 @@ enum editorKey {
     DELETE_KEY
 };
 
+typedef struct erow
+{
+    int size;
+    char *chars;
+} erow;
+
+
 //Terminals
 void enableRawMode();
 void disableRawMode();
@@ -62,5 +72,8 @@ void editorMoveCursor(int key);
 //Output
 void editorRefreshScreen();
 void editorDrawRows();
+
+//File i/o
+void editorOpen();
 
 #endif 

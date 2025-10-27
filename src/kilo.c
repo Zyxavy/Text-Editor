@@ -7,6 +7,7 @@ void initEditor()
 {
     E.curX = 0;
     E.curY = 0;
+    E.numRows = 0;
 
     if(getWindowSize(&E.screenRows, &E.screenCols) == -1) die("getWindowSize");//Get terminal size
 
@@ -16,6 +17,7 @@ int main()
 {
     enableRawMode();//Enable raw mode to disable echoing
     initEditor();
+    editorOpen();
 
     while (1)
     {
@@ -272,28 +274,36 @@ void editorDrawRows(struct appendbuff *ab)
     int y;
     for(y = 0; y < E.screenRows; y++) //For each row
     {
-        if(y == E.screenRows / 3) //Display welcome message on one-third down the screen
+        if(y >= E.numRows)
         {
-            char welcome[80];
-            int welcomeLen = snprintf(welcome, sizeof(welcome), "Kilo editor -- version %s", KILO_VERSION);
-
-            if(welcomeLen > E.screenCols) welcomeLen = E.screenCols; //Trim if too long
-            int padding = (E.screenCols - welcomeLen) / 2; //Calculate left padding
-
-            if(padding)
+            if(y == E.screenRows / 3) //Display welcome message on one-third down the screen
             {
-                abAppend(ab, ">", 1);
-                padding--;
-            }
-            while(padding--) abAppend(ab, " ", 1); //Add left padding
+                char welcome[80];
+                int welcomeLen = snprintf(welcome, sizeof(welcome), "Kilo editor -- version %s", KILO_VERSION);
 
-            abAppend(ab, welcome, welcomeLen);
+                if(welcomeLen > E.screenCols) welcomeLen = E.screenCols; //Trim if too long
+                int padding = (E.screenCols - welcomeLen) / 2; //Calculate left padding
+
+                if(padding)
+                {
+                    abAppend(ab, ">", 1);
+                    padding--;
+                }
+                while(padding--) abAppend(ab, " ", 1); //Add left padding
+
+                abAppend(ab, welcome, welcomeLen);
+            }
+            else
+            {
+            abAppend(ab, ">", 1);
+            }
         }
         else
         {
-            abAppend(ab, ">", 1);
+            int len = E.row.size;
+            if(len > E.screenCols) len = E.screenCols;
+            abAppend(ab, E.row.chars, len );
         }
-
         abAppend(ab, "\x1b[K", 3);//Clear line
         if(y < E.screenRows - 1) //Avoid adding a new line on the last row
         {
@@ -301,4 +311,17 @@ void editorDrawRows(struct appendbuff *ab)
         }
     }
 
+}
+
+// #===File I/O===#
+void editorOpen()
+{
+    char *line = "World, Hello!";
+    ssize_t lineLen = 13;
+
+    E.row.size = lineLen;
+    E.row.chars = malloc(lineLen + 1);
+    memcpy(E.row.chars, line, lineLen);
+    E.row.chars[lineLen] = '\0';
+    E.numRows = 1;
 }

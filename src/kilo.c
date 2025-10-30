@@ -235,12 +235,22 @@ void editorMoveCursor(int key)
         {
             E.curX--; 
         }
+        else if(E.curY > 0)
+        {
+            E.curY--;
+            E.curX = E.row[E.curY].size;
+        }
         break;
     case ARROW_RIGHT: 
         if(row && E.curX < row->size)
         {
         E.curX++;
         } 
+        else if(row && E.curX == row->size)
+        {
+            E.curY++;
+            E.curX = 0;
+        }
         break;
     case ARROW_UP: 
         if(E.curY !=  0)

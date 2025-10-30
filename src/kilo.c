@@ -5,6 +5,7 @@ struct editorConfig E;
 //  #===Init===#
 void initEditor()
 {
+    //Initialize editor state to 0 or NULL
     E.curX = 0;
     E.curY = 0;
     E.renderX = 0;
@@ -12,9 +13,10 @@ void initEditor()
     E.colOffset = 0;
     E.numRows = 0;
     E.row = NULL;
+    E.fileName = NULL;
 
     if(getWindowSize(&E.screenRows, &E.screenCols) == -1) die("getWindowSize");//Get terminal size
-
+    E.screenRows -= 1;
 }
 
 int main(int argc, char*argv[])
@@ -189,6 +191,7 @@ void abFree(struct appendbuff *ab)
 {
     free(ab->b);
 }
+
 //  #===Input===#
 void editorProcessKeypress()
 {
@@ -205,12 +208,22 @@ void editorProcessKeypress()
             E.curX = 0;
             break;
         case END_KEY: //Go to end of line
-            E.curX = E.screenCols - 1;
+            if(E.curY < E.numRows) E.curX = E.row[E.curY].size++;
             break;
         
         case PAGE_UP: 
         case PAGE_DOWN:
             {
+                if(c == PAGE_UP)
+                {
+                    E.curY = E.rowOffset;
+                }
+                else if(c == PAGE_DOWN)
+                {
+                    E.curY = E.rowOffset + E.screenRows - 1;
+                    if(E.curY > E.numRows) E.curY = E.numRows;
+                }
+
                 int times = E.screenRows;
                 while(times--) editorMoveCursor(c == PAGE_UP ? ARROW_UP : ARROW_DOWN); //Move cursor up or down by screen rows
             }
@@ -286,6 +299,7 @@ void editorRefreshScreen()
     abAppend(&ab, "\x1b[H", 3); //Reposition cursor to top-left
 
     editorDrawRows(&ab); //Draw rows
+    editorDrawStatusBar(&ab); //Draw status bar
 
     char buffer[32];
     snprintf(buffer, sizeof(buffer), "\x1b[%d;%dH", (E.curY - E.rowOffset) + 1, (E.renderX - E.colOffset) + 1); //Reposition cursor
@@ -335,10 +349,10 @@ void editorDrawRows(struct appendbuff *ab)
             abAppend(ab, &E.row[fileRow].render[E.colOffset], len); //Append row content
         }
         abAppend(ab, "\x1b[K", 3);//Clear line
-        if(y < E.screenRows - 1) //Avoid adding a new line on the last row
-        {
+       
+        
             abAppend(ab, "\r\n", 2);
-        }
+        
     }
 
 }
@@ -369,9 +383,38 @@ void editorScroll()
     }
 }
 
+void editorDrawStatusBar(struct appendbuff * ab)
+{
+    abAppend(ab, "\x1b[7m", 4);
+    char status[80], renderStatus[80];
+    int len = snprintf(status, sizeof(status), "%.20s - %d lines", E.fileName ? E.fileName : "[No Name]", E.numRows); //Create status message
+    int renderLen = sprintf(renderStatus, sizeof(renderStatus), "%d/%d", E.curY + 1, E.numRows);
+
+    if(len > E.screenCols) len = E.screenCols;
+    abAppend(ab, status, len);
+
+    while(len < E.screenCols)
+    {
+        if(E.screenCols - len == renderLen)
+        {
+            abAppend(ab, renderStatus, renderLen);
+            break;
+        }
+        else
+        {
+            abAppend(ab, " ", 1);
+            len++;
+        }
+    }
+    abAppend(ab, "\x1b[m", 3);
+}
+
 // #===File I/O===#
 void editorOpen(char *fileName)
 {
+    free(E.fileName);
+    E.fileName = strdup(fileName); //Store file name
+
     FILE *fp = fopen(fileName, "r"); //Open file for reading, if fails then call 'die'
     if(!fp) die("fopen");
 
@@ -403,6 +446,7 @@ void editorAppendRow(char *s, size_t len)
 
     E.row[at].rSize = 0;
     E.row[at].render = NULL;
+    editorUpdateRow(&E.row[at]);
 
     E.numRows++; //Increment number of rows
 }
@@ -411,30 +455,30 @@ void editorUpdateRow(erow *row)
 {
     int tabs = 0;
     int j;
-    for(j = 0; j < row->size; j++)
+    for(j = 0; j < row->size; j++) //Count number of tabs
     {
-        if(row->chars[j] == '\t') tabs++;
+        if(row->chars[j] == '\t') tabs++; //Each tab will expand to multiple spaces
     }
 
     free(row->render);
-    row->render = malloc(row->size + tabs * (KILO_TAB_STOP - 1) + 1);
+    row->render = malloc(row->size + tabs * (KILO_TAB_STOP - 1) + 1); //Allocate memory for rendered row
     
     int idx = 0;
-    for(j = 0; j < row->size; j++)
+    for(j = 0; j < row->size; j++) //For each character in the original row
     {
         if(row->chars[j] == '\t')
         {
             row->render[idx++] = ' ';
-            while(idx % KILO_TAB_STOP != 0) row->render[idx++] = ' ';
+            while(idx % KILO_TAB_STOP != 0) row->render[idx++] = ' '; //Expand tab to spaces
         }
         else
         {
-            row->render[idx++] = row->chars[j];
+            row->render[idx++] = row->chars[j]; //Copy character
         }
     }
 
     row->render[idx] = '\0';
-    row->rSize = idx;
+    row->rSize = idx; //Set rendered size
 }
 
 int editorRowCurXToRenderX(erow *row, int curX)
@@ -442,8 +486,11 @@ int editorRowCurXToRenderX(erow *row, int curX)
     int renderX = 0;
     for(int j = 0; j < curX; j++)
     {
-        if(row->chars[j] == '\t') renderX += (KILO_TAB_STOP - 1) - (renderX % KILO_TAB_STOP);
+        if(row->chars[j] == '\t') renderX += (KILO_TAB_STOP - 1) - (renderX % KILO_TAB_STOP); //Account for tab expansion
         renderX++;
     }
     return renderX;
 }
+
+
+// TBI: STATUS MESSAGE

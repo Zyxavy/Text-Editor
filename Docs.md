@@ -116,3 +116,5 @@ The editor must know the dimensions of the terminal window to render correctly.
 3. It parses this response using sscanf() to extract the row and column numbers.
 
 .....
+
+linked page up and down. end now brings to the end of a line. created a status bar

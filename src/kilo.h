@@ -42,6 +42,7 @@ struct editorConfig
     int screenCols;
     int numRows;
     erow *row;
+    char *fileName;
     struct termios original_termios;
 };
 
@@ -82,8 +83,9 @@ void editorMoveCursor(int key);
 
 //Output
 void editorRefreshScreen();
-void editorDrawRows();
+void editorDrawRows(struct appendbuff *ab);
 void editorScroll();
+void editorDrawStatusBar(struct appendbuff * ab);
 
 //File i/o
 void editorOpen(char *fileName);

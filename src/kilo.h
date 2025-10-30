@@ -21,17 +21,21 @@
 #define CTRL_KEY(k) ((k) & 0x1f)
 #define ABUF_INIT {NULL, 0}
 #define KILO_VERSION "0.0.1"
+#define KILO_TAB_STOP 8
 
 //data
 typedef struct erow
 {
     int size;
+    int rSize;
     char *chars;
+    char *render;
 } erow;
 
 struct editorConfig
 {
     int curX, curY;
+    int renderX;
     int rowOffset;
     int colOffset;
     int screenRows;
@@ -86,5 +90,7 @@ void editorOpen(char *fileName);
 
 //Row Operations
 void editorAppendRow(char *s, size_t len);
+void editorUpdateRow(erow *row);
+int editorRowCurXToRenderX(erow *row, int curX);
 
 #endif 

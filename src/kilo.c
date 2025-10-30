@@ -7,6 +7,7 @@ void initEditor()
 {
     E.curX = 0;
     E.curY = 0;
+    E.renderX = 0;
     E.rowOffset = 0;
     E.colOffset = 0;
     E.numRows = 0;
@@ -226,7 +227,7 @@ void editorProcessKeypress()
 
 void editorMoveCursor(int key)
 {
-    erow *row = (E.curY >= E.numRows) ? NULL : &E.row[E.curY];
+    erow *row = (E.curY >= E.numRows) ? NULL : &E.row[E.curY]; //Get current row
 
     switch (key)
     {
@@ -238,7 +239,7 @@ void editorMoveCursor(int key)
         else if(E.curY > 0)
         {
             E.curY--;
-            E.curX = E.row[E.curY].size;
+            E.curX = E.row[E.curY].size; //Move to end of previous line
         }
         break;
     case ARROW_RIGHT: 
@@ -246,7 +247,7 @@ void editorMoveCursor(int key)
         {
         E.curX++;
         } 
-        else if(row && E.curX == row->size)
+        else if(row && E.curX == row->size) //Move to beginning of next line
         {
             E.curY++;
             E.curX = 0;
@@ -266,7 +267,7 @@ void editorMoveCursor(int key)
         break;
     }
 
-    row = (E.curY >= E.numRows) ? NULL : &E.row[E.curY];
+    row = (E.curY >= E.numRows) ? NULL : &E.row[E.curY]; //Get current row after moving
     int rowLen = row ? row->size : 0;
     if(E.curX > rowLen)
     {
@@ -287,7 +288,7 @@ void editorRefreshScreen()
     editorDrawRows(&ab); //Draw rows
 
     char buffer[32];
-    snprintf(buffer, sizeof(buffer), "\x1b[%d;%dH", (E.curY - E.rowOffset) + 1, (E.curX - E.colOffset) + 1); //Reposition cursor
+    snprintf(buffer, sizeof(buffer), "\x1b[%d;%dH", (E.curY - E.rowOffset) + 1, (E.renderX - E.colOffset) + 1); //Reposition cursor
     abAppend(&ab, buffer, strlen(buffer)); //Append cursor position command
 
     abAppend(&ab, "\x1b[?25h", 6);
@@ -328,10 +329,10 @@ void editorDrawRows(struct appendbuff *ab)
         }
         else
         {
-            int len = E.row[fileRow].size - E.colOffset;
+            int len = E.row[fileRow].rSize - E.colOffset; //Calculate length to render
             if(len < 0) len = 0;
             if(len > E.screenCols) len = E.screenCols;
-            abAppend(ab, &E.row[fileRow].chars[E.colOffset], len);
+            abAppend(ab, &E.row[fileRow].render[E.colOffset], len); //Append row content
         }
         abAppend(ab, "\x1b[K", 3);//Clear line
         if(y < E.screenRows - 1) //Avoid adding a new line on the last row
@@ -344,21 +345,27 @@ void editorDrawRows(struct appendbuff *ab)
 
 void editorScroll()
 {
-    if(E.curY < E.rowOffset)
+    E.renderX = 0;
+    if(E.curY < E.numRows) //If cursor is within the file rows
+    {
+        E.renderX = editorRowCurXToRenderX(&E.row[E.curY], E.curX); //Convert curX to renderX considering tabs
+    }
+
+    if(E.curY < E.rowOffset) //Scroll up
     {
         E.rowOffset = E.curY;
     }
-    if(E.curY >= E.rowOffset + E.screenRows)
+    if(E.curY >= E.rowOffset + E.screenRows) //Scroll down
     {
         E.rowOffset = E.curY - E.screenRows + 1;
     }
-    if(E.curX < E.colOffset)
+    if(E.renderX < E.colOffset) //Scroll left
     {
-        E.colOffset = E.curX;
+        E.colOffset = E.renderX;
     }
-    if(E.curX >= E.colOffset + E.screenCols)
+    if(E.renderX >= E.colOffset + E.screenCols) //Scroll right
     {
-        E.colOffset = E.curX - E.screenCols + 1;
+        E.colOffset = E.renderX - E.screenCols + 1;
     }
 }
 
@@ -383,6 +390,7 @@ void editorOpen(char *fileName)
     fclose(fp); //Close file
 }
 
+// #===Row Operations==#
 void editorAppendRow(char *s, size_t len)
 {
     E.row = realloc(E.row, sizeof(erow) * (E.numRows + 1)); //Resize row array to fit new row
@@ -392,5 +400,50 @@ void editorAppendRow(char *s, size_t len)
     E.row[at].chars = malloc(len + 1); //Allocate memory for row characters
     memcpy(E.row[at].chars, s, len); //Copy characters into row
     E.row[at].chars[len] = '\0'; //Null-terminate the string
+
+    E.row[at].rSize = 0;
+    E.row[at].render = NULL;
+
     E.numRows++; //Increment number of rows
+}
+
+void editorUpdateRow(erow *row)
+{
+    int tabs = 0;
+    int j;
+    for(j = 0; j < row->size; j++)
+    {
+        if(row->chars[j] == '\t') tabs++;
+    }
+
+    free(row->render);
+    row->render = malloc(row->size + tabs * (KILO_TAB_STOP - 1) + 1);
+    
+    int idx = 0;
+    for(j = 0; j < row->size; j++)
+    {
+        if(row->chars[j] == '\t')
+        {
+            row->render[idx++] = ' ';
+            while(idx % KILO_TAB_STOP != 0) row->render[idx++] = ' ';
+        }
+        else
+        {
+            row->render[idx++] = row->chars[j];
+        }
+    }
+
+    row->render[idx] = '\0';
+    row->rSize = idx;
+}
+
+int editorRowCurXToRenderX(erow *row, int curX)
+{
+    int renderX = 0;
+    for(int j = 0; j < curX; j++)
+    {
+        if(row->chars[j] == '\t') renderX += (KILO_TAB_STOP - 1) - (renderX % KILO_TAB_STOP);
+        renderX++;
+    }
+    return renderX;
 }

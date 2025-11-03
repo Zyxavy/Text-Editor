@@ -103,6 +103,9 @@ void editorUpdateRow(erow *row);
 int editorRowCurXToRenderX(erow *row, int curX);
 void editorRowInsertChar(erow *row, int at, int c);
 
+//Editor Operations
+void editorInsertChar(int c);
+
 
 
 #endif 

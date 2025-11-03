@@ -237,8 +237,9 @@ void editorProcessKeypress()
         case ARROW_RIGHT: 
         case ARROW_UP: 
         case ARROW_DOWN:
-            editorMoveCursor(c);
-            break;
+            editorMoveCursor(c); break;
+        default:
+            editorInsertChar(c); break;
     }
 }
 
@@ -390,7 +391,7 @@ void editorScroll()
 
 void editorDrawStatusBar(struct appendbuff * ab)
 {
-     abAppend(ab, "\x1b[7m", 4); // Switch to inverted colors
+    abAppend(ab, "\x1b[7m", 4); // Switch to inverted colors
     
     char status[80], renderStatus[80];
     
@@ -416,7 +417,6 @@ void editorDrawStatusBar(struct appendbuff * ab)
         abAppend(ab, " ", 1);
         len++;
     }
-    
     
     abAppend(ab, renderStatus, renderLen);
     
@@ -538,3 +538,13 @@ void editorRowInsertChar(erow *row, int at, int c)
 
 // #===Editor Operations===#
 
+void editorInsertChar(int c)
+{
+    if(E.curY == E.numRows)
+    {
+        editorAppendRow("", 0);
+    }
+
+    editorRowInsertChar(&E.row[E.curY], E.curX, c);
+    E.curX++;
+}

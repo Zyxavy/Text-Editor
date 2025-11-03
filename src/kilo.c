@@ -2,6 +2,11 @@
 
 struct editorConfig E;
 
+void editorSetStatusMessage(const char *fmt, ...)
+{
+    return;
+} //prototype
+
 //  #===Init===#
 void initEditor()
 {
@@ -30,7 +35,7 @@ int main(int argc, char*argv[])
         editorOpen(argv[1]);
     }
 
-    editorStatusMessage("HELP: Ctrl+Q = Quit");
+    editorSetStatusMessage("HELP: Ctrl+S = Save | Ctrl+Q = Quit");
 
     while (1)
     {
@@ -511,18 +516,20 @@ void editorSave()
     int fd = open(E.fileName, O_RDWR | O_CREAT, 0644); //Open file for reading and writing, create if it doesn't exist
     if(fd != -1)
     {
-        if(ftruncate(fd, len) != -1)
+        if(ftruncate(fd, len) != -1) //Truncate file to new length
         {
-            if(write(fd, buffer, len) == len)
+            if(write(fd, buffer, len) == len) //write buffer to file
             {
                 close(fd);
                 free(buffer);
+                editorSetStatusMessage("%d bytes written into disk", len);
                 return;
             }
         }
         close(fd);
     }
     free(buffer);
+    editorSetStatusMessage("Cant Save! I/O error: %s", strerror(errno));
 }
 
 // #===Row Operations==#

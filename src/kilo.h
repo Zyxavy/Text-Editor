@@ -95,6 +95,7 @@ void editorScroll();
 void editorDrawStatusBar(struct appendbuff * ab);
 void editorStatusMessage(const char* fmt, ...);
 void editorDrawMessageBar(struct appendbuff *ab);
+void editorSetStatusMessage(const char *fmt, ...); //prototype
 
 //File i/o
 void editorOpen(char *fileName);

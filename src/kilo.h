@@ -58,6 +58,7 @@ struct appendbuff
 };
 
 enum editorKey {
+    BACKSPACE = 127,
     ARROW_UP = 1000, 
     ARROW_DOWN,
     ARROW_LEFT, 

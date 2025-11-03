@@ -202,6 +202,10 @@ void editorProcessKeypress()
     int c = editorReadKey();
     switch (c)
     {
+        case '\r':
+            //WIP
+            break;
+
         case CTRL_KEY('q'): //Quit on Ctrl-Q
             write(STDOUT_FILENO, "\x1b[2J", 4); 
             write(STDOUT_FILENO, "\x1[H", 3); 
@@ -213,6 +217,11 @@ void editorProcessKeypress()
             break;
         case END_KEY: //Go to end of line
             if(E.curY < E.numRows) E.curX = E.row[E.curY].size++;
+            break;
+        case BACKSPACE:
+        case CTRL_KEY('h'):
+        case DELETE_KEY:
+            //WIP
             break;
         
         case PAGE_UP: 
@@ -238,6 +247,9 @@ void editorProcessKeypress()
         case ARROW_UP: 
         case ARROW_DOWN:
             editorMoveCursor(c); break;
+        case CTRL_KEY('l'):
+        case '\x1b':
+            break;
         default:
             editorInsertChar(c); break;
     }

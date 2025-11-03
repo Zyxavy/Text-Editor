@@ -211,6 +211,8 @@ void editorProcessKeypress()
             write(STDOUT_FILENO, "\x1[H", 3); 
             exit(0); 
             break;
+        
+        case CTRL_KEY('s'): editorSave(); break;
 
         case HOME_KEY: //Go to beginning of line
             E.curX = 0;
@@ -482,21 +484,45 @@ char *editorRowsToString(int *bufferlen)
 {
     int totalLen = 0;
     int i;
-    for(i = 0; i < E.numRows; i++) totalLen += E.row[i].size + 1;
+    for(i = 0; i < E.numRows; i++) totalLen += E.row[i].size + 1; //Calculate total length including newlines
     *bufferlen = totalLen;
 
     char *buffer = malloc(totalLen);
     char *p = buffer;
 
-    for(i = 0; i < E.numRows; i++)
+    for(i = 0; i < E.numRows; i++) //For each row
     {
-        memcpy(p, E.row[i].chars, E.row[i].size);
-        p += E.row[i].size;
-        *p = '\n';
+        memcpy(p, E.row[i].chars, E.row[i].size); //Copy row characters
+        p += E.row[i].size; //Move pointer forward
+        *p = '\n'; //Add newline
         p++;
     }
     
     return buffer;
+}
+
+void editorSave()
+{
+    if(E.fileName == NULL) return;
+
+    int len;
+    char *buffer = editorRowsToString(&len); //Convert rows to string
+
+    int fd = open(E.fileName, O_RDWR | O_CREAT, 0644); //Open file for reading and writing, create if it doesn't exist
+    if(fd != -1)
+    {
+        if(ftruncate(fd, len) != -1)
+        {
+            if(write(fd, buffer, len) == len)
+            {
+                close(fd);
+                free(buffer);
+                return;
+            }
+        }
+        close(fd);
+    }
+    free(buffer);
 }
 
 // #===Row Operations==#

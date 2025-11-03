@@ -18,6 +18,7 @@
 #include <sys/types.h>
 #include <time.h>
 #include <stdarg.h>
+#include <fcntl.h>
 
 //Defines
 #define CTRL_KEY(k) ((k) & 0x1f)
@@ -98,6 +99,7 @@ void editorDrawMessageBar(struct appendbuff *ab);
 //File i/o
 void editorOpen(char *fileName);
 char *editorRowsToString(int *bufferlen);
+void editorSave();
 
 //Row Operations
 void editorAppendRow(char *s, size_t len);

@@ -390,28 +390,37 @@ void editorScroll()
 
 void editorDrawStatusBar(struct appendbuff * ab)
 {
-    abAppend(ab, "\x1b[7m", 4); //Switch to inverted colors
-    char status[80], renderStatus[80]; //Buffers for status bar content
-    int len = snprintf(status, sizeof(status), "%.20s - %d lines", E.fileName ? E.fileName : "[No Name]", E.numRows); //Create status message
-    int renderLen = sprintf(renderStatus, sizeof(renderStatus), "%d/%d", E.curY + 1, E.numRows); //Create render position message
+     abAppend(ab, "\x1b[7m", 4); // Switch to inverted colors
+    
+    char status[80], renderStatus[80];
+    
+    //Create status message
+    int len = snprintf(status, sizeof(status), "%.20s - %d lines", 
+                      E.fileName ? E.fileName : "[No Name]", E.numRows); 
 
-    if(len > E.screenCols) len = E.screenCols; //Trim if too long
+    //Create render position message
+    int renderLen = snprintf(renderStatus, sizeof(renderStatus), "%d/%d", 
+                            E.curY + 1, E.numRows);
+    
+    if (len > E.screenCols) len = E.screenCols;
+    
+    // C
+    int statusWidth = E.screenCols - renderLen;
+    if (statusWidth < 0) statusWidth = 0;
+    
+    if (len > statusWidth) len = statusWidth;
     abAppend(ab, status, len);
-
-    while(len < E.screenCols) //Fill the rest of the status bar
+    
+    while (len < statusWidth) 
     {
-        if(E.screenCols - len == renderLen)
-        {
-            abAppend(ab, renderStatus, renderLen);
-            break;
-        }
-        else
-        {
-            abAppend(ab, " ", 1);
-            len++;
-        }
+        abAppend(ab, " ", 1);
+        len++;
     }
-    abAppend(ab, "\x1b[m", 3);
+    
+    
+    abAppend(ab, renderStatus, renderLen);
+    
+    abAppend(ab, "\x1b[m", 3); // Reset colors
     abAppend(ab, "\r\n", 2);
 }
 
@@ -426,11 +435,11 @@ void editorStatusMessage(const char* fmt, ...)
 
 void editorDrawMessageBar(struct appendbuff *ab)
 {
-    abAppend(ab, "x1b[K", 3);
-    int msgLen = strlen(E.statusMsg);
+    abAppend(ab, "x1b[K", 3); //Clear message bar line
+    int msgLen = strlen(E.statusMsg); //Get length of status message
     
     if(msgLen > E.screenCols) msgLen = E.screenCols;
-    if(msgLen && time(NULL) - E.statusMsgTime < 5) abAppend(ab, E.statusMsg, msgLen);
+    if(msgLen && time(NULL) - E.statusMsgTime < 5) abAppend(ab, E.statusMsg, msgLen); //Display message if within 5 seconds
 }
 
 // #===File I/O===#
@@ -515,3 +524,17 @@ int editorRowCurXToRenderX(erow *row, int curX)
     }
     return renderX;
 }
+
+void editorRowInsertChar(erow *row, int at, int c)
+{
+    if(at < 0 || at > row->size) at = row->size; //Clamp 'at' to valid range
+
+    row->chars = realloc(row->chars, row->size + 2); //Resize character array to fit new character
+    memmove(&row->chars[at + 1], &row->chars[at], row->size - at + 1); //Shift characters to the right
+    row->size++;
+    row->chars[at] = c;
+    editorUpdateRow(row);
+}
+
+// #===Editor Operations===#
+

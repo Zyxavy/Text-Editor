@@ -14,9 +14,11 @@ void initEditor()
     E.numRows = 0;
     E.row = NULL;
     E.fileName = NULL;
+    E.statusMsg[0] = '\0';
+    E.statusMsgTime = 0;
 
     if(getWindowSize(&E.screenRows, &E.screenCols) == -1) die("getWindowSize");//Get terminal size
-    E.screenRows -= 1;
+    E.screenRows -= 2;
 }
 
 int main(int argc, char*argv[])
@@ -27,6 +29,8 @@ int main(int argc, char*argv[])
     {
         editorOpen(argv[1]);
     }
+
+    editorStatusMessage("HELP: Ctrl+Q = Quit");
 
     while (1)
     {
@@ -300,6 +304,7 @@ void editorRefreshScreen()
 
     editorDrawRows(&ab); //Draw rows
     editorDrawStatusBar(&ab); //Draw status bar
+    editorDrawMessageBar(&ab); //Draw message bar
 
     char buffer[32];
     snprintf(buffer, sizeof(buffer), "\x1b[%d;%dH", (E.curY - E.rowOffset) + 1, (E.renderX - E.colOffset) + 1); //Reposition cursor
@@ -385,15 +390,15 @@ void editorScroll()
 
 void editorDrawStatusBar(struct appendbuff * ab)
 {
-    abAppend(ab, "\x1b[7m", 4);
-    char status[80], renderStatus[80];
+    abAppend(ab, "\x1b[7m", 4); //Switch to inverted colors
+    char status[80], renderStatus[80]; //Buffers for status bar content
     int len = snprintf(status, sizeof(status), "%.20s - %d lines", E.fileName ? E.fileName : "[No Name]", E.numRows); //Create status message
-    int renderLen = sprintf(renderStatus, sizeof(renderStatus), "%d/%d", E.curY + 1, E.numRows);
+    int renderLen = sprintf(renderStatus, sizeof(renderStatus), "%d/%d", E.curY + 1, E.numRows); //Create render position message
 
-    if(len > E.screenCols) len = E.screenCols;
+    if(len > E.screenCols) len = E.screenCols; //Trim if too long
     abAppend(ab, status, len);
 
-    while(len < E.screenCols)
+    while(len < E.screenCols) //Fill the rest of the status bar
     {
         if(E.screenCols - len == renderLen)
         {
@@ -407,6 +412,25 @@ void editorDrawStatusBar(struct appendbuff * ab)
         }
     }
     abAppend(ab, "\x1b[m", 3);
+    abAppend(ab, "\r\n", 2);
+}
+
+void editorStatusMessage(const char* fmt, ...)
+{
+    va_list ap; //Variable argument list
+    va_start(ap, fmt); //Initialize argument list
+    vsnprintf(E.statusMsg, sizeof(E.statusMsg), fmt, ap); //Format the message
+    va_end(ap); //Clean up argument list
+    E.statusMsgTime = time(NULL); //Record time message was set
+}
+
+void editorDrawMessageBar(struct appendbuff *ab)
+{
+    abAppend(ab, "x1b[K", 3);
+    int msgLen = strlen(E.statusMsg);
+    
+    if(msgLen > E.screenCols) msgLen = E.screenCols;
+    if(msgLen && time(NULL) - E.statusMsgTime < 5) abAppend(ab, E.statusMsg, msgLen);
 }
 
 // #===File I/O===#
@@ -491,6 +515,3 @@ int editorRowCurXToRenderX(erow *row, int curX)
     }
     return renderX;
 }
-
-
-// TBI: STATUS MESSAGE

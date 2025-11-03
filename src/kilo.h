@@ -16,6 +16,8 @@
 #include <sys/ioctl.h>
 #include <string.h>
 #include <sys/types.h>
+#include <time.h>
+#include <stdarg.h>
 
 //Defines
 #define CTRL_KEY(k) ((k) & 0x1f)
@@ -43,7 +45,10 @@ struct editorConfig
     int numRows;
     erow *row;
     char *fileName;
+    char statusMsg[80];
+    time_t statusMsgTime;
     struct termios original_termios;
+    
 };
 
 struct appendbuff
@@ -86,6 +91,8 @@ void editorRefreshScreen();
 void editorDrawRows(struct appendbuff *ab);
 void editorScroll();
 void editorDrawStatusBar(struct appendbuff * ab);
+void editorStatusMessage(const char* fmt, ...);
+void editorDrawMessageBar(struct appendbuff *ab);
 
 //File i/o
 void editorOpen(char *fileName);

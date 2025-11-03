@@ -97,6 +97,7 @@ void editorDrawMessageBar(struct appendbuff *ab);
 
 //File i/o
 void editorOpen(char *fileName);
+char *editorRowsToString(int *bufferlen);
 
 //Row Operations
 void editorAppendRow(char *s, size_t len);

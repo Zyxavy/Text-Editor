@@ -478,6 +478,27 @@ void editorOpen(char *fileName)
     fclose(fp); //Close file
 }
 
+char *editorRowsToString(int *bufferlen)
+{
+    int totalLen = 0;
+    int i;
+    for(i = 0; i < E.numRows; i++) totalLen += E.row[i].size + 1;
+    *bufferlen = totalLen;
+
+    char *buffer = malloc(totalLen);
+    char *p = buffer;
+
+    for(i = 0; i < E.numRows; i++)
+    {
+        memcpy(p, E.row[i].chars, E.row[i].size);
+        p += E.row[i].size;
+        *p = '\n';
+        p++;
+    }
+    
+    return buffer;
+}
+
 // #===Row Operations==#
 void editorAppendRow(char *s, size_t len)
 {
@@ -552,11 +573,11 @@ void editorRowInsertChar(erow *row, int at, int c)
 
 void editorInsertChar(int c)
 {
-    if(E.curY == E.numRows)
+    if(E.curY == E.numRows) //If cursor is at the end, append a new row
     {
         editorAppendRow("", 0);
     }
 
-    editorRowInsertChar(&E.row[E.curY], E.curX, c);
+    editorRowInsertChar(&E.row[E.curY], E.curX, c); //Insert character at cursor position
     E.curX++;
 }

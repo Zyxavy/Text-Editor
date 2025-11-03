@@ -614,3 +614,6 @@ void editorInsertChar(int c)
     editorRowInsertChar(&E.row[E.curY], E.curX, c); //Insert character at cursor position
     E.curX++;
 }
+
+
+//TBI Dirty Flag

@@ -1,118 +1,250 @@
-# Incomplete Documentation
+# Kilo Text Editor Technical Documentation
+-----------------------------------
 
-## Kilo Technical Documentation>
+## Overview
 
-This document provides a detailed explanation of the internal workings of the Kilo text editor. It covers terminal manipulation, input/output handling, and screen rendering.
+This editor is a minimal terminal-based text editor modeled after the kilo editor by antirez. It supports:
 
-### 1. Terminal Handling (termios.h)
+- Moving the cursor with arrow keys
+- Opening and saving files
+- Rendering text with scroll support
+- Rendering a status bar and message bar
 
-The editor needs to precisely control the terminal's behavior. This is primarily achieved using the <termios.h> library.
+The source code is broken into two main files:
 
-#### Raw Mode
+- kilo.h — Header file that declares types, constants, and function prototypes
+- kilo.c — Main source file that implements the editor functionalities
 
-By default, the terminal operates in "canonical mode" (or cooked mode), where keyboard input is processed line by line. To process each keypress as it happens, we must enable "raw mode".
-```
-enableRawMode():
-```
+-----------------------------------
 
-1. Reads the current terminal attributes into a termios struct using tcgetattr(). A copy of these original attributes is saved.
+## Headers, Macros, and Constants
 
-2. Sets an atexit(disableRawMode) handler to ensure that even if the program crashes, the terminal settings are restored.
+### Feature Test Macros
 
-3. Modifies the termios struct to disable several flags:
+#define _DEFAULT_SOURCE
+#define _BSD_SOURCE
+#define _GNU_SOURCE
 
-- ECHO: Prevents keys from being printed to the terminal as they are typed.
+These macros enable certain POSIX, BSD, and GNU extensions.
 
-- ICANON: Disables canonical mode, allowing us to read input byte-by-byte.
+### Included Headers
 
-- ISIG: Disables signals like Ctrl-C (SIGINT) and Ctrl-Z (SIGTSTP).
+- Standard I/O: stdio.h
+- Terminal control: termios.h, unistd.h, sys/ioctl.h
+- Error handling: errno.h, string.h, stdarg.h
+- Time management: time.h
+- File handling: fcntl.h
 
-- IXON: Disables software flow control (Ctrl-S and Ctrl-Q).
+### Defined Macros
 
-- IEXTEN: Disables Ctrl-V.
+Macro: CTRL_KEY(k)
+Usage: Converts a character to its Ctrl-key value
 
-- ICRNL: Prevents the terminal from translating carriage returns (\r) into newlines (\n).
+Macro: KILO_VERSION
+Usage: Application Version
 
-- OPOST: Disables all output processing, preventing translation of \n to \r\n.
+Macro: KILO_TAB_STOP
+Usage: Number of spaces represented by a tab (default: 8)
 
-4. Applies the modified attributes to the terminal using tcsetattr(). The TCSAFLUSH argument ensures the changes are applied after all pending output is written and any unread input is discarded.
+Macro: ABUF_INIT
+Usage: Initializes an append buffer
 
-- disableRawMode(): This function is called on exit to restore the terminal's original attributes, ensuring the user's shell works correctly after the editor closes.
+-----------------------------------
 
-### 2. Input Processing
+## Data Structures
 
-#### Reading Keystrokes
+### struct editorConfig
 
-- editorReadKey(): This function waits for a single keypress and returns it. It uses read() from <unistd.h> to read 1 byte from standard input. It loops until a byte is read, handling potential errors.
+Holds the current state of the editor:
 
-- editorProcessKeypress(): This function calls editorReadKey() and then uses a switch statement to handle the input. Currently, it handles Ctrl-Q to exit and w/a/s/d for cursor movement.
+struct editorConfig {
+    int curX, curY;          // Cursor position
+    int renderX;             // Rendered X position (for tabs)
+    int rowOffset, colOffset;  // Scroll offsets
+    int screenRows, screenCols; // Editor window dimensions
+    int numRows;               // Number of rows
+    erow *row;                 // Pointer to rows of text
+    char *fileName;            // File being edited
+    char statusMsg[80];       // Status message buffer
+    time_t statusMsgTime;       // Timestamp for status message
+    struct termios original_termios; // Original terminal state
+};
 
-- CTRL_KEY(k) Macro: This macro simulates the Ctrl key modifier. It works by performing a bitwise-AND with 0x1f (binary 00011111), which sets the upper 3 bits of the character's byte to 0. This mimics how the Ctrl key was traditionally handled in terminals.
+### typedef struct erow
 
-### 3. Screen Rendering and Output
+Represents a single line in the text buffer:
 
-To avoid screen flicker and perform efficient updates, the editor builds the entire screen content in memory before writing it to the terminal in a single operation.
+typedef struct erow {
+    int size;     // Raw character count
+    int rSize;    // Rendered character count (tabs expanded)
+    char *chars;  // Raw character string
+    char *render; // Rendered string (prepared for display)
+} erow;
 
-#### The Append Buffer (struct appendbuff)
+### struct appendbuff
 
-This dynamic string structure is used to buffer all the output.
+Dynamic string buffer used for rendering:
 
-- abAppend(ab, s, len): Appends a string s of length len to the buffer. It uses realloc() to resize the memory block holding the buffer's content.
+struct appendbuff {
+    char *b;  // Buffer
+    int len;  // Length
+};
 
-- abFree(ab): Frees the memory allocated for the buffer.
+-----------------------------------
 
-#### VT100 Escape Sequences
+## Editor Initialization
 
-The editor uses standard VT100 escape sequences to control the terminal's cursor and appearance. These are special character sequences that start with \x1b (the escape character).
+The editor is set up with default state values in initEditor():
 
-- \x1b[2J: Clear the entire screen.
+void initEditor() {
+    E.curX = E.curY = 0;
+    E.rowOffset = E.colOffset = 0;
+    E.numRows = 0;
+    E.row = NULL;
+    E.fileName = NULL;
+    // Determine terminal window size...
+}
 
-- \x1b[K: Clear the current line from the cursor to the end.
+It calls getWindowSize() to fetch the dimensions (in rows and columns) of the terminal.
 
-- \x1b[H: Position the cursor at the top-left corner (home position).
+-----------------------------------
 
-- \x1b[?25l: Hide the cursor.
+## Terminal Handling
 
-- \x1b[?25h: Show the cursor.
+The editor manipulates the terminal mode to handle inputs rawly and render outputs precisely.
 
-- \x1b[<row>;<col>H: Position the cursor at a specific row and col.
+### Raw Mode
 
-#### The Rendering (editorRefreshScreen)
+- enableRawMode(): Activates raw input mode by turning off flags like ECHO, ICANON, etc.
+- disableRawMode(): Restores the original terminal state using the saved original_termios
 
-This is the main rendering function, called in the main loop.
+### Flags disabled in raw mode
 
-1. Initializes an append buffer ab.
+Flag: ECHO
+Explanation: Prevents typed input from echoing
 
-2. Hides the cursor (\x1b[?25l) to prevent it from flickering during the redraw.
+Flag: ICANON
+Explanation: Disables line-based buffering (input available immediately)
 
-3. Positions the cursor at the home position (\x1b[H).
+Flag: ISIG
+Explanation: Disables Ctrl-C, Ctrl-Z signals
 
-4. Calls editorDrawRows() to draw the content of the screen into the buffer.
+Flag: IXON
+Explanation: Disables Ctrl-S/Q for software flow control
 
-5. Calculates the new cursor position and generates the escape sequence to move it there (\x1b[<E.curY + 1>;<E.curX + 1>H).
+Flag: ICRNL
+Explanation: Prevents translating CR to NL
 
-6. Shows the cursor again (\x1b[?25h).
+Flag: OPOST
+Explanation: Disables output processing
 
-7. Writes the entire content of the append buffer to standard output with a single write() call.
+-----------------------------------
 
-8. Frees the append buffer.
+## Input Processing
 
-### 4. Window Size and Cursor Position
+### editorReadKey()
 
-The editor must know the dimensions of the terminal window to render correctly.
+Reads a single key from stdin using read(), including multibyte escape sequences for arrow keys and others.
 
-- getWindowSize():
+### editorProcessKeypress()
 
-1. The primary method is to use ioctl() with TIOCGWINSZ. This system call fills a winsize struct with the number of rows and columns.
+Reflects keyboard events by updating the editor state:
 
-2. If ioctl() fails, it uses a fallback method: it moves the cursor to the bottom-right of the screen (\x1b[999C\x1b[999B) and then queries the cursor's position.
+Key: Ctrl-Q
+Action: Quit editor
 
-- getCursorPosition(): This function is the fallback for getWindowSize().
+Key: Ctrl-S
+Action: Save file
 
-1. It writes an escape sequence (\x1b[6n) that asks the terminal to report its cursor position.
+Key: Arrow Keys
+Action: Move cursor
 
-2. It then reads the response from standard input, which is formatted as \x1b[<rows>;<cols>R.
+Key: Page Up / Down
+Action: Scroll by screen
 
-3. It parses this response using sscanf() to extract the row and column numbers.
+Key: Home / End
+Action: Move cursor (begin/end of line)
 
-.....
+-----------------------------------
+
+## Rendering / Output
+
+### Refresh Cycle
+
+editorRefreshScreen() updates the visible portion of the editor:
+
+1.  editorScroll() adjusts offsets
+2.  Initializes append buffer
+3.  Draws content (via editorDrawRows())
+4.  Draws status bar (editorDrawStatusBar())
+5.  Draws message bar (editorDrawMessageBar())
+6.  Moves cursor to proper location
+7.  Outputs everything in one write() call
+
+This process ensures smooth non-flickering display.
+
+-----------------------------------
+
+## File I/O
+
+### Opening Files
+
+editorOpen() reads a file line by line and loads it into the internal row storage using editorAppendRow().
+
+### Saving Files
+
+editorSave() converts all rows to a single string using editorRowsToString() and writes it to disk.
+
+-----------------------------------
+
+## Row Operations
+
+### Core Functions
+
+Function: editorAppendRow()
+Purpose: Adds a new row to the editor buffer
+
+Function: editorUpdateRow()
+Purpose: Prepares a row for rendering (expanding tabs)
+
+Function: editorRowInsertChar()
+Purpose: Inserts a character into a row
+
+Function: editorRowCurXToRenderX()
+Purpose: Converts raw index to rendered index
+
+-----------------------------------
+
+## Append Buffer
+
+Used to collect output commands and content efficiently:
+
+- abAppend(): Appends data to the buffer
+- abFree(): Frees memory after use
+
+-----------------------------------
+
+## Key Bindings
+
+Key: Ctrl-Q
+Description: Exit editor
+
+Key: Ctrl-S
+Description: Save file
+
+Key: Arrow Keys
+Description: Move cursor
+
+Key: Page Up / Down
+Description: Vertical scrolling
+
+Key: Home / End
+Description: Jump to start/end of line
+
+Key: Backspace/Delete
+Description: (TODO) Delete characters
+
+-----------------------------------
+
+## This project is still incomplete
+

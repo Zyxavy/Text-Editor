@@ -25,6 +25,7 @@
 #define ABUF_INIT {NULL, 0}
 #define KILO_VERSION "0.0.1"
 #define KILO_TAB_STOP 8
+#define KILO_QUIT_TIMES 3
 
 //data
 typedef struct erow

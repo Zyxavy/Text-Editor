@@ -2,6 +2,11 @@
 
 struct editorConfig E;
 
+void editorSetStatusMessage(const char *fmt, ...)
+{
+    return;
+} //prototype 
+
 //  #===Init===#
 void initEditor()
 {
@@ -200,6 +205,8 @@ void abFree(struct appendbuff *ab)
 //  #===Input===#
 void editorProcessKeypress()
 {
+    static int quitTimes = KILO_QUIT_TIMES;
+
     int c = editorReadKey();
     switch (c)
     {
@@ -208,6 +215,12 @@ void editorProcessKeypress()
             break;
 
         case CTRL_KEY('q'): //Quit on Ctrl-Q
+            if (E.dirty && quitTimes > 0)
+            {
+                editorSetStatusMessage("WARNING! File has unsaved changes." "Press Ctrl-Q %d more times to quit.", quitTimes);
+                return;
+            }
+
             write(STDOUT_FILENO, "\x1b[2J", 4); 
             write(STDOUT_FILENO, "\x1[H", 3); 
             exit(0); 
@@ -256,6 +269,7 @@ void editorProcessKeypress()
         default:
             editorInsertChar(c); break;
     }
+    quitTimes = KILO_QUIT_TIMES;
 }
 
 void editorMoveCursor(int key)

@@ -1,2 +1,2 @@
-sdasdasdasd	This is a test text
-                This is another text
+This is a test text
+This is another text

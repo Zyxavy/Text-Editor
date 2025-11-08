@@ -45,6 +45,7 @@ struct editorConfig
     int screenCols;
     int numRows;
     erow *row;
+    int dirty;
     char *fileName;
     char statusMsg[80];
     time_t statusMsgTime;

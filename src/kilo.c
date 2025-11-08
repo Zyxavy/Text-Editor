@@ -2,11 +2,6 @@
 
 struct editorConfig E;
 
-void editorSetStatusMessage(const char *fmt, ...)
-{
-    return;
-} //prototype
-
 //  #===Init===#
 void initEditor()
 {
@@ -21,6 +16,7 @@ void initEditor()
     E.fileName = NULL;
     E.statusMsg[0] = '\0';
     E.statusMsgTime = 0;
+    E.dirty = 0;
 
     if(getWindowSize(&E.screenRows, &E.screenCols) == -1) die("getWindowSize");//Get terminal size
     E.screenRows -= 2;
@@ -35,7 +31,7 @@ int main(int argc, char*argv[])
         editorOpen(argv[1]);
     }
 
-    editorSetStatusMessage("HELP: Ctrl+S = Save | Ctrl+Q = Quit");
+    editorStatusMessage("HELP: Ctrl+S = Save | Ctrl+Q = Quit");
 
     while (1)
     {
@@ -415,8 +411,8 @@ void editorDrawStatusBar(struct appendbuff * ab)
     char status[80], renderStatus[80];
     
     //Create status message
-    int len = snprintf(status, sizeof(status), "%.20s - %d lines", 
-                      E.fileName ? E.fileName : "[No Name]", E.numRows); 
+    int len = snprintf(status, sizeof(status), "%.20s - %d lines %s", 
+                      E.fileName ? E.fileName : "[No Name]", E.numRows, E.dirty ? "(Modified)" : " "); 
 
     //Create render position message
     int renderLen = snprintf(renderStatus, sizeof(renderStatus), "%d/%d", 
@@ -424,7 +420,7 @@ void editorDrawStatusBar(struct appendbuff * ab)
     
     if (len > E.screenCols) len = E.screenCols;
     
-    // C
+
     int statusWidth = E.screenCols - renderLen;
     if (statusWidth < 0) statusWidth = 0;
     
@@ -483,6 +479,7 @@ void editorOpen(char *fileName)
     } 
     free(line);
     fclose(fp); //Close file
+    E.dirty = 0;
 }
 
 char *editorRowsToString(int *bufferlen)
@@ -522,14 +519,15 @@ void editorSave()
             {
                 close(fd);
                 free(buffer);
-                editorSetStatusMessage("%d bytes written into disk", len);
+                E.dirty = 0;
+                editorStatusMessage("%d bytes written into disk", len);
                 return;
             }
         }
         close(fd);
     }
     free(buffer);
-    editorSetStatusMessage("Cant Save! I/O error: %s", strerror(errno));
+    editorStatusMessage("Cant Save! I/O error: %s", strerror(errno));
 }
 
 // #===Row Operations==#
@@ -548,6 +546,7 @@ void editorAppendRow(char *s, size_t len)
     editorUpdateRow(&E.row[at]);
 
     E.numRows++; //Increment number of rows
+    E.dirty++;
 }
 
 void editorUpdateRow(erow *row)
@@ -600,6 +599,7 @@ void editorRowInsertChar(erow *row, int at, int c)
     row->size++;
     row->chars[at] = c;
     editorUpdateRow(row);
+    E.dirty++;
 }
 
 // #===Editor Operations===#
@@ -616,4 +616,3 @@ void editorInsertChar(int c)
 }
 
 
-//TBI Dirty Flag

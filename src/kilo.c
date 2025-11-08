@@ -628,6 +628,32 @@ void editorRowDeleteChar(erow *row, int at)
     E.dirty++;
 }
 
+void editorFreeRow(erow *row)
+{
+    free(row->render);
+    free(row->chars);
+}
+
+void editorDeleteRow(int at)
+{
+    if(at < 0 || at >= E.numRows) return; 
+
+    editorFreeRow(&E.row[at]);
+    memmove(&E.row[at], &E.row[at + 1], sizeof(erow) * (E.numRows - at - 1)); //Shift rows up
+    E.numRows--;
+    E.dirty++;
+}
+
+void editorRowAppendString(erow *row, char *s, size_t len)
+{
+    row->chars = realloc(row->chars, row->size + len + 1); //Resize character array to fit new string
+    mempcpy(&row->chars[row->size], s, len); //Append new string
+    row->size += len;
+    row->chars[row->size] = '\0';
+    editorUpdateRow(row);
+    E.dirty++;
+}
+
 // #===Editor Operations===#
 
 void editorInsertChar(int c)
@@ -644,12 +670,20 @@ void editorInsertChar(int c)
 void editorDeleteChar()
 {
     if(E.curY == E.numRows) return; //If cursor is at the end, nothing to delete
+    if(E.curX == 0 && E.curY == 0) return;
 
     erow *row = &E.row[E.curY]; //Get current row
-    if(E.curX > 0)
+    if(E.curX > 0) //If not at the beginning of the line, delete character before cursor
     {
         editorRowDeleteChar(row, E.curX - 1);
         E.curX--;
+    }
+    else //If at the beginning of the line, merge with previous line
+    {
+        E.curX = E.row[E.curY - 1].size;
+        editorRowAppendString(&E.row[E.curY - 1], row->chars, row->size);
+        editorDeleteRow(E.curY);
+        E.curY--;
     }
 }
 

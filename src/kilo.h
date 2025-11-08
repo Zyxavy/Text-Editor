@@ -89,6 +89,7 @@ void abFree(struct appendbuff *ab);
 //Input
 void editorProcessKeypress();
 void editorMoveCursor(int key);
+char *editorPrompt(char *prompt)
 
 //Output
 void editorRefreshScreen();
@@ -97,7 +98,6 @@ void editorScroll();
 void editorDrawStatusBar(struct appendbuff * ab);
 void editorStatusMessage(const char* fmt, ...);
 void editorDrawMessageBar(struct appendbuff *ab);
-void editorSetStatusMessage(const char *fmt, ...); //prototype
 
 //File i/o
 void editorOpen(char *fileName);
@@ -117,6 +117,11 @@ void editorRowAppendString(erow *row, char *s, size_t len);
 //Editor Operations
 void editorInsertChar(int c);
 void editorDeleteChar();
+void editorInsertNewLine();
+
+//Prototypes
+void editorSetStatusMessage(const char *fmt, ...); 
+void editorRefreshScreen(); 
 
 
 #endif 

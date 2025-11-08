@@ -324,6 +324,53 @@ void editorMoveCursor(int key)
     }
 }
 
+char *editorPrompt(char *prompt)
+{
+    //Dynamic buffer for user input
+    size_t bufferSize = 128;
+    char *buffer = malloc(bufferSize);
+
+    size_t bufferLen = 0;
+    buffer[0] = '\0';
+
+    while(1)
+    {
+        editorSetStatusMessage(prompt, buffer);
+        editorRefreshScreen();
+
+        int c = editorReadKey();
+
+        if(c == DELETE_KEY || c == CTRL_KEY('h') || c == BACKSPACE) //Handle backspace
+        {
+            if(bufferLen != 0) buffer[--bufferLen] = '\0';
+        }
+        else if(c == '\x1b') //If escape key, cancel prompt
+        {
+            editorSetStatusMessage("");
+            free(buffer);
+            return NULL;
+        }
+        else if(c == '\r') //if enter key
+        {
+            if(bufferLen != 0) //If buffer is not empty, return it
+            {
+                editorSetStatusMessage("");
+                return buffer;
+            }
+        }
+        else if(!iscntrl(c) && c < 128) //If printable character
+        {
+            if(bufferLen == bufferSize - 1) //Resize buffer if needed
+            {
+                bufferSize *= 2;
+                buffer = realloc(buffer, bufferSize);
+            }
+            buffer[bufferLen++] = c;
+            buffer[bufferLen] = '\0';
+        }
+    }
+}
+
 //  #===Output===#
 void editorRefreshScreen()
 {
@@ -521,7 +568,16 @@ char *editorRowsToString(int *bufferlen)
 
 void editorSave()
 {
-    if(E.fileName == NULL) return;
+    if(E.fileName == NULL)
+    {
+        E.fileName = editorPrompt("Save as: %s (ESC to cancel)");
+
+        if(E.fileName == NULL)
+        {
+            editorSetStatusMessage("Save aborted!");
+            return;
+        }
+    }
 
     int len;
     char *buffer = editorRowsToString(&len); //Convert rows to string

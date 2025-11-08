@@ -217,7 +217,8 @@ void editorProcessKeypress()
         case CTRL_KEY('q'): //Quit on Ctrl-Q
             if (E.dirty && quitTimes > 0)
             {
-                editorSetStatusMessage("WARNING! File has unsaved changes." "Press Ctrl-Q %d more times to quit.", quitTimes);
+                editorSetStatusMessage("WARNING! File has unsaved changes. " "Press Ctrl-Q %d more times to quit.", quitTimes);
+                quitTimes--;
                 return;
             }
 
@@ -237,7 +238,8 @@ void editorProcessKeypress()
         case BACKSPACE:
         case CTRL_KEY('h'):
         case DELETE_KEY:
-            //WIP
+            if(c == DELETE_KEY) editorMoveCursor(ARROW_RIGHT);
+            editorDeleteChar();
             break;
         
         case PAGE_UP: 
@@ -616,6 +618,16 @@ void editorRowInsertChar(erow *row, int at, int c)
     E.dirty++;
 }
 
+void editorRowDeleteChar(erow *row, int at)
+{
+    if(at < 0 || at >= row->size) return; //Clamp 'at' to valid range
+
+    memmove(&row->chars[at], &row->chars[at+1], row->size - at); //Shift characters to the left
+    row->size--;
+    editorUpdateRow(row);
+    E.dirty++;
+}
+
 // #===Editor Operations===#
 
 void editorInsertChar(int c)
@@ -629,4 +641,15 @@ void editorInsertChar(int c)
     E.curX++;
 }
 
+void editorDeleteChar()
+{
+    if(E.curY == E.numRows) return; //If cursor is at the end, nothing to delete
+
+    erow *row = &E.row[E.curY]; //Get current row
+    if(E.curX > 0)
+    {
+        editorRowDeleteChar(row, E.curX - 1);
+        E.curX--;
+    }
+}
 

@@ -109,10 +109,11 @@ void editorAppendRow(char *s, size_t len);
 void editorUpdateRow(erow *row);
 int editorRowCurXToRenderX(erow *row, int curX);
 void editorRowInsertChar(erow *row, int at, int c);
+void editorRowDeleteChar(erow *row, int at);
 
 //Editor Operations
 void editorInsertChar(int c);
-
+void editorDeleteChar();
 
 
 #endif 

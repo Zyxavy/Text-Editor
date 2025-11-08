@@ -211,7 +211,7 @@ void editorProcessKeypress()
     switch (c)
     {
         case '\r':
-            //WIP
+            editorInsertNewLine();
             break;
 
         case CTRL_KEY('q'): //Quit on Ctrl-Q
@@ -491,7 +491,7 @@ void editorOpen(char *fileName)
         {
             lineLen--; 
         }
-        editorAppendRow(line, lineLen);//Append row to editor
+        editorInsertRow(E.numRows, line, lineLen);//Append row to editor
     } 
     free(line);
     fclose(fp); //Close file
@@ -547,11 +547,13 @@ void editorSave()
 }
 
 // #===Row Operations==#
-void editorAppendRow(char *s, size_t len)
+void editorInsertRow(int at, char *s, size_t len)
 {
-    E.row = realloc(E.row, sizeof(erow) * (E.numRows + 1)); //Resize row array to fit new row
+    if(at < 0 || at > E.numRows) return;
 
-    int at =  E.numRows; //Index of new row
+    E.row = realloc(E.row, sizeof(erow) * (E.numRows + 1));//Resize row array to fit new row
+    memmove(&E.row[at + 1], &E.row[at], sizeof(erow) * (E.numRows - at)); //Shift rows down to make space
+
     E.row[at].size = len; //Set size of new row
     E.row[at].chars = malloc(len + 1); //Allocate memory for row characters
     memcpy(E.row[at].chars, s, len); //Copy characters into row
@@ -660,7 +662,7 @@ void editorInsertChar(int c)
 {
     if(E.curY == E.numRows) //If cursor is at the end, append a new row
     {
-        editorAppendRow("", 0);
+        editorInsertRow(E.numRows, "", 0);
     }
 
     editorRowInsertChar(&E.row[E.curY], E.curX, c); //Insert character at cursor position
@@ -687,3 +689,21 @@ void editorDeleteChar()
     }
 }
 
+void editorInsertNewLine()
+{
+    if(E.curX == 0) //If at the beginning of the line, insert a new empty row above
+    {
+        editorInsertRow(E.curY, "", 0);
+    }
+    else //Otherwise, split the current row
+    {
+        erow *row = &E.row[E.curY];
+        editorInsertRow(E.curY + 1, &row->chars[E.curX], row->size - E.curX);
+        row = &E.row[E.curY];
+        row->size = E.curX;
+        row->chars[row->size] = '\0';
+        editorUpdateRow(row);
+    }
+    E.curY++;
+    E.curX = 0;
+}

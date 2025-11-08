@@ -105,7 +105,7 @@ char *editorRowsToString(int *bufferlen);
 void editorSave();
 
 //Row Operations
-void editorAppendRow(char *s, size_t len);
+void editorInsertRow(int at, char *s, size_t len);
 void editorUpdateRow(erow *row);
 int editorRowCurXToRenderX(erow *row, int curX);
 void editorRowInsertChar(erow *row, int at, int c);

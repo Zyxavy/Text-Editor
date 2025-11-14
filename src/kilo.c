@@ -622,12 +622,13 @@ void editorSave()
 // #===Find===#
 void editorFind()
 {
+    //save positions
     int savedCurX = E.curX;
     int savedCurY = E.curY;
     int savedColOffset = E.colOffset;
     int savedRowOffset = E.rowOffset;
 
-    char *query = editorPrompt("Search: %s (ESC to cancel)", editorFindCallback); //Prompt for search query with callback
+    char *query = editorPrompt("Search: %s (Use ESC/Arrows/Enter)", editorFindCallback); //Prompt for search query with callback
     
     if(query)
     {
@@ -644,16 +645,45 @@ void editorFind()
 
 void editorFindCallback(char *query, int key)
 {
-    if(key == '\r' || key == '\x1b') return; //If enter or escape, do nothing
+    static int lastMatch = -1;
+    static int direction = 1;
+
+    if(key == '\r' || key == '\x1b')//Enter or Escape key
+    {
+        lastMatch = -1;
+        direction = 1;
+        return;
+    }
+    else if(key == ARROW_RIGHT || key == ARROW_DOWN) //Next match
+    {
+        direction = 1;
+    }
+    else if(key = ARROW_LEFT || key == ARROW_UP) //Previous match
+    {
+        direction = -1;
+    } 
+    else //New search, reset state
+    {
+        lastMatch = -1;
+        direction = 1;
+    }
+    
+    if(lastMatch == -1) direction = 1;
+    int current = lastMatch;
 
     for (int i = 0; i < E.numRows; i++)
     {
-        erow *row = &E.row[i]; //Get current row
+        current += direction;
+        if(current == -1) current = E.numRows - 1; //Wrap around to last row
+        else if(current == E.numRows) current = 0; //Wrap around to first row
+
+        erow *row = &E.row[current]; //Get current row
         char *match = strstr(row->render, query); //Search for query in rendered row
         
         if(match) //If match found
         {
-            E.curY = i;
+            lastMatch = current;
+            E.curY = current;
             E.curX = editorRowRenderXToCurX(row, match - row->render);
             E.rowOffset = E.numRows;
             break;

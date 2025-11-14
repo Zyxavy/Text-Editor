@@ -7,6 +7,7 @@ void editorSetStatusMessage(const char *fmt, ...)
     return;
 } //prototype 
 
+
 //  #===Init===#
 void initEditor()
 {
@@ -36,7 +37,7 @@ int main(int argc, char*argv[])
         editorOpen(argv[1]);
     }
 
-    editorStatusMessage("HELP: Ctrl+S = Save | Ctrl+Q = Quit");
+    editorStatusMessage("HELP: Ctrl+S = Save | Ctrl+Q = Quit | Ctrl+F = Find");
 
     while (1)
     {
@@ -45,6 +46,7 @@ int main(int argc, char*argv[])
     } 
     return 0;
 }
+
 
 //  #===Terminals===#
 void enableRawMode()
@@ -186,6 +188,7 @@ int getCursorPosition(int *rows, int *cols)
     return 0;
 }
 
+
 // #===Append Buffer===# 
 void abAppend(struct appendbuff *ab, const char *s, int len)
 {
@@ -201,6 +204,7 @@ void abFree(struct appendbuff *ab)
 {
     free(ab->b);
 }
+
 
 //  #===Input===#
 void editorProcessKeypress()
@@ -235,6 +239,12 @@ void editorProcessKeypress()
         case END_KEY: //Go to end of line
             if(E.curY < E.numRows) E.curX = E.row[E.curY].size++;
             break;
+
+        case CTRL_KEY('f'): //Find
+            editorFind();
+            break;
+        
+            //delete or backspaces
         case BACKSPACE:
         case CTRL_KEY('h'):
         case DELETE_KEY:
@@ -242,6 +252,7 @@ void editorProcessKeypress()
             editorDeleteChar();
             break;
         
+            //navigate up and down
         case PAGE_UP: 
         case PAGE_DOWN:
             {
@@ -370,6 +381,7 @@ char *editorPrompt(char *prompt)
         }
     }
 }
+
 
 //  #===Output===#
 void editorRefreshScreen()
@@ -520,6 +532,7 @@ void editorDrawMessageBar(struct appendbuff *ab)
     if(msgLen && time(NULL) - E.statusMsgTime < 5) abAppend(ab, E.statusMsg, msgLen); //Display message if within 5 seconds
 }
 
+
 // #===File I/O===#
 void editorOpen(char *fileName)
 {
@@ -602,6 +615,28 @@ void editorSave()
     editorStatusMessage("Cant Save! I/O error: %s", strerror(errno));
 }
 
+void editorFind()
+{
+    char *query = editorPrompt("Search: %s (ESC to cancel)");
+    if(query == NULL) return;
+
+    for (int i = 0; i < E.numRows; i++)
+    {
+        erow *row = &E.row[i]; //Get current row
+        char *match = strstr(row->render, query); //Search for query in rendered row
+        
+        if(match) //If match found
+        {
+            E.curY = i;
+            E.curX = editorRowRenderXToCurX(row, match - row->render);
+            E.rowOffset = E.numRows;
+            break;
+        }
+    }
+    free(query);
+}
+
+
 // #===Row Operations==#
 void editorInsertRow(int at, char *s, size_t len)
 {
@@ -664,6 +699,24 @@ int editorRowCurXToRenderX(erow *row, int curX)
     return renderX;
 }
 
+int editorRowRenderXToCurX(erow *row, int rx)
+{
+    int curRX = 0;
+    
+    int cx;
+    for(cx = 0; cx < row->size; cx++)
+    {
+        if(row->chars[cx] == '\t')
+        {
+            curRX += (KILO_TAB_STOP - 1) - (curRX & KILO_TAB_STOP); //Account for tab expansion
+        }
+        curRX++;
+
+        if(curRX > rx) return cx;
+    }
+    return cx;
+}
+
 void editorRowInsertChar(erow *row, int at, int c)
 {
     if(at < 0 || at > row->size) at = row->size; //Clamp 'at' to valid range
@@ -712,8 +765,8 @@ void editorRowAppendString(erow *row, char *s, size_t len)
     E.dirty++;
 }
 
-// #===Editor Operations===#
 
+// #===Editor Operations===#
 void editorInsertChar(int c)
 {
     if(E.curY == E.numRows) //If cursor is at the end, append a new row

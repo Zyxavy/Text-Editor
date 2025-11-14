@@ -89,7 +89,7 @@ void abFree(struct appendbuff *ab);
 //Input
 void editorProcessKeypress();
 void editorMoveCursor(int key);
-char *editorPrompt(char *prompt)
+char *editorPrompt(char *prompt);
 
 //Output
 void editorRefreshScreen();
@@ -103,11 +103,13 @@ void editorDrawMessageBar(struct appendbuff *ab);
 void editorOpen(char *fileName);
 char *editorRowsToString(int *bufferlen);
 void editorSave();
+void editorFind();
 
 //Row Operations
 void editorInsertRow(int at, char *s, size_t len);
 void editorUpdateRow(erow *row);
 int editorRowCurXToRenderX(erow *row, int curX);
+int editorRowRenderXToCurX(erow *row, int rx);
 void editorRowInsertChar(erow *row, int at, int c);
 void editorRowDeleteChar(erow *row, int at);
 void editorFreeRow(erow *row);

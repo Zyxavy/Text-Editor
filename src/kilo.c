@@ -445,12 +445,25 @@ void editorDrawRows(struct appendbuff *ab)
             int len = E.row[fileRow].rSize - E.colOffset; //Calculate length to render
             if(len < 0) len = 0;
             if(len > E.screenCols) len = E.screenCols;
-            abAppend(ab, &E.row[fileRow].render[E.colOffset], len); //Append row content
+
+            char *c = &E.row[fileRow].render[E.colOffset]; //Get pointer to start of render
+            for(int j = 0; j < len; j++)
+            {
+                if(isdigit(c[j]))
+                {
+                    abAppend(ab, "\x1b[31m", 5); //Set red color for digits
+                    abAppend(ab, &c[j], 1);
+                    abAppend(ab, "\x1b[39m", 5); //Reset to default color
+                }
+                else
+                {
+                    abAppend(ab, &c[j], 1);
+                }
+            }
+
         }
         abAppend(ab, "\x1b[K", 3);//Clear line
-       
-        
-            abAppend(ab, "\r\n", 2);
+        abAppend(ab, "\r\n", 2);
         
     }
 
@@ -658,7 +671,7 @@ void editorFindCallback(char *query, int key)
     {
         direction = 1;
     }
-    else if(key = ARROW_LEFT || key == ARROW_UP) //Previous match
+    else if(key == ARROW_LEFT || key == ARROW_UP) //Previous match
     {
         direction = -1;
     } 

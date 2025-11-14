@@ -622,11 +622,23 @@ void editorSave()
 // #===Find===#
 void editorFind()
 {
+    int savedCurX = E.curX;
+    int savedCurY = E.curY;
+    int savedColOffset = E.colOffset;
+    int savedRowOffset = E.rowOffset;
+
     char *query = editorPrompt("Search: %s (ESC to cancel)", editorFindCallback); //Prompt for search query with callback
     
     if(query)
     {
         free(query);
+    }
+    else //If search was cancelled, restore cursor position
+    {
+        E.curX = savedCurX;
+        E.curY = savedCurY;
+        E.colOffset = savedColOffset;
+        E.rowOffset = savedRowOffset;
     }
 }
 

@@ -248,4 +248,3 @@ Description: (TODO) Delete characters
 
 ## This project is still incomplete
 
-.. Modified editorprompt to handle callback and implemented editorfindcallback for incremental search feature.

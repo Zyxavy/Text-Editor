@@ -335,7 +335,7 @@ void editorMoveCursor(int key)
     }
 }
 
-char *editorPrompt(char *prompt)
+char *editorPrompt(char *prompt, void(*callback)(char*,int))
 {
     //Dynamic buffer for user input
     size_t bufferSize = 128;
@@ -358,6 +358,7 @@ char *editorPrompt(char *prompt)
         else if(c == '\x1b') //If escape key, cancel prompt
         {
             editorSetStatusMessage("");
+            if(callback) callback(buffer, c); //Call callback with escape key
             free(buffer);
             return NULL;
         }
@@ -366,6 +367,7 @@ char *editorPrompt(char *prompt)
             if(bufferLen != 0) //If buffer is not empty, return it
             {
                 editorSetStatusMessage("");
+                if(callback) callback(buffer, c);//Call callback with enter key
                 return buffer;
             }
         }
@@ -379,6 +381,7 @@ char *editorPrompt(char *prompt)
             buffer[bufferLen++] = c;
             buffer[bufferLen] = '\0';
         }
+        if(callback) callback(buffer, c); //Call callback with current buffer and keypress
     }
 }
 
@@ -583,7 +586,7 @@ void editorSave()
 {
     if(E.fileName == NULL)
     {
-        E.fileName = editorPrompt("Save as: %s (ESC to cancel)");
+        E.fileName = editorPrompt("Save as: %s (ESC to cancel)", NULL);
 
         if(E.fileName == NULL)
         {
@@ -615,10 +618,21 @@ void editorSave()
     editorStatusMessage("Cant Save! I/O error: %s", strerror(errno));
 }
 
+
+// #===Find===#
 void editorFind()
 {
-    char *query = editorPrompt("Search: %s (ESC to cancel)");
-    if(query == NULL) return;
+    char *query = editorPrompt("Search: %s (ESC to cancel)", editorFindCallback); //Prompt for search query with callback
+    
+    if(query)
+    {
+        free(query);
+    }
+}
+
+void editorFindCallback(char *query, int key)
+{
+    if(key == '\r' || key == '\x1b') return; //If enter or escape, do nothing
 
     for (int i = 0; i < E.numRows; i++)
     {
@@ -633,9 +647,8 @@ void editorFind()
             break;
         }
     }
-    free(query);
-}
 
+}
 
 // #===Row Operations==#
 void editorInsertRow(int at, char *s, size_t len)

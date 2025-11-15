@@ -926,12 +926,24 @@ void editorUpdateSyntax(erow *row)
     row->highlight = realloc(row->highlight, row->rSize); 
     memset(row->highlight, HL_NORMAL, row->rSize); //Default all to normal
 
-    for(int i = 0; i < row->rSize; i++) 
+    int prevSep = 1;
+
+    int i = 0;
+    while(i < row->rSize)
     {
-        if(isdigit(row->render[i]))
+        char c = row->render[i];
+        unsigned char prevHL = (i > 0) ? row->highlight[i-1] : HL_NORMAL; //Get previous highlight
+
+        if(isdigit(c) && (prevSep || prevHL == HL_NUMBER) || 
+            (c == '.' && prevHL == HL_NUMBER)) //If digit or part of a number
         {
-            row->highlight[i] = HL_NUMBER; //Highlight numbers
+            row->highlight = HL_NUMBER; //Highlight numbers
+            i++;
+            prevSep = 0;
+            continue;
         }
+        prevSep = isSeparator(c);
+        i++;
     }
 }
 
@@ -943,4 +955,9 @@ int editorSyntaxToColor(int highlight)
         case HL_MATCH: return 34;
         default: return 37;
     }
+}
+
+int isSeparator(int c)
+{
+    return isspace(c) || c == '\0' || strchr(",.()+-/*=~%<>[];", c) != NULL;
 }

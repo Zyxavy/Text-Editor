@@ -714,6 +714,8 @@ void editorFindCallback(char *query, int key)
             E.curY = current;
             E.curX = editorRowRenderXToCurX(row, match - row->render);
             E.rowOffset = E.numRows;
+
+            memset(&row->highlight[match - row->render], HL_MATCH, strlen(query));
             break;
         }
     }
@@ -908,14 +910,14 @@ void editorInsertNewLine()
 
 void editorUpdateSyntax(erow *row)
 {
-    row->highlight = realloc(row->highlight, row->rSize);
-    memset(row->highlight, HL_NORMAL, row->rSize);
+    row->highlight = realloc(row->highlight, row->rSize); 
+    memset(row->highlight, HL_NORMAL, row->rSize); //Default all to normal
 
-    for(int i = 0; i < row->rSize; i++)
+    for(int i = 0; i < row->rSize; i++) 
     {
         if(isdigit(row->render[i]))
         {
-            row->highlight = HL_NUMBER;
+            row->highlight[i] = HL_NUMBER; //Highlight numbers
         }
     }
 }
@@ -925,8 +927,7 @@ int editorSyntaxToColor(int highlight)
     switch (highlight)
     {
         case HL_NUMBER: return 31;
+        case HL_MATCH: return 34;
         default: return 37;
     }
 }
-
-

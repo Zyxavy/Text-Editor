@@ -676,6 +676,16 @@ void editorFindCallback(char *query, int key)
     static int lastMatch = -1;
     static int direction = 1;
 
+    static int savedHLLine;
+    static char *savedHL = NULL;
+
+    if(savedHL)
+    {
+        mempcpy(&E.row[savedHLLine].highlight, savedHL, E.row[savedHLLine].rSize); //Restore previous highlight
+        free(savedHL);
+        savedHL = NULL;
+    }
+
     if(key == '\r' || key == '\x1b')//Enter or Escape key
     {
         lastMatch = -1;
@@ -715,7 +725,10 @@ void editorFindCallback(char *query, int key)
             E.curX = editorRowRenderXToCurX(row, match - row->render);
             E.rowOffset = E.numRows;
 
-            memset(&row->highlight[match - row->render], HL_MATCH, strlen(query));
+            savedHLLine = current;
+            savedHL = malloc(row->rSize);
+            memcpy(savedHL, row->highlight, row->rSize); //Save current highlight
+            memset(&row->highlight[match - row->render], HL_MATCH, strlen(query)); //Highlight match
             break;
         }
     }

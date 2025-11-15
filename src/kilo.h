@@ -34,6 +34,7 @@ typedef struct erow
     int rSize;
     char *chars;
     char *render;
+    unsigned char *highlight;
 } erow;
 
 struct editorConfig
@@ -71,6 +72,12 @@ enum editorKey {
     HOME_KEY,
     END_KEY,
     DELETE_KEY
+};
+
+enum editorHighlight
+{
+    HL_NORMAL = 0,
+    HL_NUMBER
 };
 
 
@@ -127,6 +134,10 @@ void editorInsertNewLine();
 //Prototypes
 void editorSetStatusMessage(const char *fmt, ...); 
 void editorRefreshScreen(); 
+
+//Syntax Highlighting
+void editorUpdateSyntax(erow *row);
+int editorSyntaxToColor(int highlight);
 
 
 #endif 

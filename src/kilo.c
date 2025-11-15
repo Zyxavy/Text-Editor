@@ -447,20 +447,35 @@ void editorDrawRows(struct appendbuff *ab)
             if(len > E.screenCols) len = E.screenCols;
 
             char *c = &E.row[fileRow].render[E.colOffset]; //Get pointer to start of render
+            unsigned char *highlight = &E.row[fileRow].highlight[E.colOffset];//Get pointer to highlight
+            int curColor = -1;
+
             for(int j = 0; j < len; j++)
             {
-                if(isdigit(c[j]))
+                if(highlight[j] == HL_NORMAL)
                 {
-                    abAppend(ab, "\x1b[31m", 5); //Set red color for digits
+                    if(curColor != -1) //If current color is not default
+                    {
+                        abAppend(ab, "\x1b[39m", 5); //Reset to default color
+                        curColor = -1;
+                    }
                     abAppend(ab, &c[j], 1);
-                    abAppend(ab, "\x1b[39m", 5); //Reset to default color
                 }
                 else
                 {
+                    int color = editorSyntaxToColor(highlight[j]);
+
+                    if(color != curColor) //If color has changed
+                    {
+                        curColor = color;
+                        char buffer[16];
+                        int charLen = snprintf(buffer, sizeof(buffer), "\x1b[%dm", color); //Set color
+                        abAppend(ab, buffer, charLen);
+                    }
                     abAppend(ab, &c[j], 1);
                 }
             }
-
+            abAppend(ab, "\x1b[39m", 5);
         }
         abAppend(ab, "\x1b[K", 3);//Clear line
         abAppend(ab, "\r\n", 2);
@@ -720,6 +735,7 @@ void editorInsertRow(int at, char *s, size_t len)
 
     E.row[at].rSize = 0;
     E.row[at].render = NULL;
+    E.row[at].highlight = NULL;
     editorUpdateRow(&E.row[at]);
 
     E.numRows++; //Increment number of rows
@@ -754,6 +770,7 @@ void editorUpdateRow(erow *row)
 
     row->render[idx] = '\0';
     row->rSize = idx; //Set rendered size
+    editorUpdateSyntax(row);
 }
 
 int editorRowCurXToRenderX(erow *row, int curX)
@@ -811,6 +828,7 @@ void editorFreeRow(erow *row)
 {
     free(row->render);
     free(row->chars);
+    free(row->highlight);
 }
 
 void editorDeleteRow(int at)
@@ -884,3 +902,31 @@ void editorInsertNewLine()
     E.curY++;
     E.curX = 0;
 }
+
+
+// #===Syntax Highlight===#
+
+void editorUpdateSyntax(erow *row)
+{
+    row->highlight = realloc(row->highlight, row->rSize);
+    memset(row->highlight, HL_NORMAL, row->rSize);
+
+    for(int i = 0; i < row->rSize; i++)
+    {
+        if(isdigit(row->render[i]))
+        {
+            row->highlight = HL_NUMBER;
+        }
+    }
+}
+
+int editorSyntaxToColor(int highlight)
+{
+    switch (highlight)
+    {
+        case HL_NUMBER: return 31;
+        default: return 37;
+    }
+}
+
+

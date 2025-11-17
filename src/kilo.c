@@ -18,6 +18,7 @@ void initEditor()
     E.statusMsg[0] = '\0';
     E.statusMsgTime = 0;
     E.dirty = 0;
+    E.syntax = NULL;
 
     if(getWindowSize(&E.screenRows, &E.screenCols) == -1) die("getWindowSize");//Get terminal size
     E.screenRows -= 2;
@@ -515,9 +516,9 @@ void editorDrawStatusBar(struct appendbuff * ab)
     int len = snprintf(status, sizeof(status), "%.20s - %d lines %s", 
                       E.fileName ? E.fileName : "[No Name]", E.numRows, E.dirty ? "(Modified)" : " "); 
 
-    //Create render position message
-    int renderLen = snprintf(renderStatus, sizeof(renderStatus), "%d/%d", 
-                            E.curY + 1, E.numRows);
+    //Create render message
+    int renderLen = snprintf(renderStatus, sizeof(renderStatus), "%s | %d/%d", 
+                            E.syntax ? E.syntax->filetype : "No file type",  E.curY + 1, E.numRows);
     
     if (len > E.screenCols) len = E.screenCols;
     
@@ -564,6 +565,8 @@ void editorOpen(char *fileName)
 {
     free(E.fileName);
     E.fileName = strdup(fileName); //Store file name
+
+    editorSelectSyntaxHighlight();
 
     FILE *fp = fopen(fileName, "r"); //Open file for reading, if fails then call 'die'
     if(!fp) die("fopen");
@@ -616,6 +619,7 @@ void editorSave()
             editorStatusMessage("Save aborted!");
             return;
         }
+        editorSelectSyntaxHighlight();
     }
 
     int len;
@@ -921,6 +925,8 @@ void editorUpdateSyntax(erow *row)
     row->highlight = realloc(row->highlight, row->rSize); 
     memset(row->highlight, HL_NORMAL, row->rSize); //Default all to normal
 
+    if(E.syntax == NULL) return;
+
     int prevSep = 1;
 
     int i = 0;
@@ -929,13 +935,16 @@ void editorUpdateSyntax(erow *row)
         char c = row->render[i];
         unsigned char prevHL = (i > 0) ? row->highlight[i-1] : HL_NORMAL; //Get previous highlight
 
-        if(isdigit(c) && (prevSep || prevHL == HL_NUMBER) || 
-            (c == '.' && prevHL == HL_NUMBER)) //If digit or part of a number
-        {
-            row->highlight = HL_NUMBER; //Highlight numbers
-            i++;
-            prevSep = 0;
-            continue;
+        if(E.syntax->flags & HL_HIGHLIGHT_NUMBERS) //If syntax highlighting for numbers is enabled
+        { 
+            if(isdigit(c) && (prevSep || prevHL == HL_NUMBER) || 
+                (c == '.' && prevHL == HL_NUMBER)) //If digit or part of a number
+            {
+                row->highlight = HL_NUMBER; //Highlight numbers
+                i++;
+                prevSep = 0;
+                continue;
+            }
         }
         prevSep = isSeparator(c); //Check if current character is a separator
         i++;
@@ -956,3 +965,38 @@ int isSeparator(int c)
 {
     return isspace(c) || c == '\0' || strchr(",.()+-/*=~%<>[];", c) != NULL;
 }
+
+void editorSelectSyntaxHighlight()
+{
+    E.syntax = NULL;
+    if(E.fileName == NULL) return;
+
+    char *extension = strrchr(E.fileName, '.'); //Get file extension
+
+    for(unsigned int i = 0; i < HLDB_ENTRIES; i++)
+    {
+        struct editorSyntax *s = &HLDB[i];
+        unsigned int j = 0;
+        
+        while (s->filematch[j]) //For each filematch pattern
+        {
+            int isExtension = (s->filematch[i][0] == '.'); //Check if pattern is an extension
+
+            //Match based on extension or substring
+            if((isExtension && extension && !strcmp(extension, s->filematch[i])) ||
+             (!isExtension && strstr(E.fileName, s->filematch[i])))
+            {
+                E.syntax = s;
+                
+                for(int filerow = 0; filerow < E.numRows; filerow++) 
+                {
+                    editorUpdateSyntax(&E.row[filerow]); //Update syntax for each row
+                }
+                return;
+            }
+            j++;
+        }
+        
+    }
+}
+

@@ -26,7 +26,9 @@
 #define KILO_VERSION "0.0.1"
 #define KILO_TAB_STOP 8
 #define KILO_QUIT_TIMES 3
+
 #define HL_HIGHLIGHT_NUMBERS (1<<0)
+#define HLDB_ENTRIES (sizeof(HLDB) / sizeof(HLDB[0]))
 
 //data
 typedef struct erow
@@ -47,12 +49,15 @@ struct editorConfig
     int screenRows;
     int screenCols;
     int numRows;
-    erow *row;
     int dirty;
+
+    erow *row;
     char *fileName;
     char statusMsg[80];
+
     time_t statusMsgTime;
     struct termios original_termios;
+    struct editorSyntax *syntax;
     
 };
 
@@ -87,6 +92,17 @@ enum editorHighlight
     HL_NORMAL = 0,
     HL_NUMBER,
     HL_MATCH
+};
+
+//File Types
+
+char *C_HL_extension[] = {".c", ".h", ".cpp", ".hpp", NULL };
+
+struct editorSyntax HLDB[] = 
+{
+    {
+        "c", C_HL_extension, HL_HIGHLIGHT_NUMBERS
+    },
 };
 
 
@@ -145,6 +161,7 @@ void editorInsertNewLine();
 void editorUpdateSyntax(erow *row);
 int editorSyntaxToColor(int highlight);
 int isSeparator(int c);
+void editorSelectSyntaxHighlight();
 
 
 #endif 

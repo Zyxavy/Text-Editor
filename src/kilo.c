@@ -2,11 +2,6 @@
 
 struct editorConfig E;
 
-void editorSetStatusMessage(const char *fmt, ...)
-{
-    return;
-} //prototype 
-
 
 //  #===Init===#
 void initEditor()
@@ -221,7 +216,7 @@ void editorProcessKeypress()
         case CTRL_KEY('q'): //Quit on Ctrl-Q
             if (E.dirty && quitTimes > 0)
             {
-                editorSetStatusMessage("WARNING! File has unsaved changes. " "Press Ctrl-Q %d more times to quit.", quitTimes);
+                editorStatusMessage("WARNING! File has unsaved changes. " "Press Ctrl-Q %d more times to quit.", quitTimes);
                 quitTimes--;
                 return;
             }
@@ -346,7 +341,7 @@ char *editorPrompt(char *prompt, void(*callback)(char*,int))
 
     while(1)
     {
-        editorSetStatusMessage(prompt, buffer);
+        editorStatusMessage(prompt, buffer);
         editorRefreshScreen();
 
         int c = editorReadKey();
@@ -357,7 +352,7 @@ char *editorPrompt(char *prompt, void(*callback)(char*,int))
         }
         else if(c == '\x1b') //If escape key, cancel prompt
         {
-            editorSetStatusMessage("");
+            editorStatusMessage("");
             if(callback) callback(buffer, c); //Call callback with escape key
             free(buffer);
             return NULL;
@@ -366,7 +361,7 @@ char *editorPrompt(char *prompt, void(*callback)(char*,int))
         {
             if(bufferLen != 0) //If buffer is not empty, return it
             {
-                editorSetStatusMessage("");
+                editorStatusMessage("");
                 if(callback) callback(buffer, c);//Call callback with enter key
                 return buffer;
             }
@@ -618,7 +613,7 @@ void editorSave()
 
         if(E.fileName == NULL)
         {
-            editorSetStatusMessage("Save aborted!");
+            editorStatusMessage("Save aborted!");
             return;
         }
     }
@@ -942,7 +937,7 @@ void editorUpdateSyntax(erow *row)
             prevSep = 0;
             continue;
         }
-        prevSep = isSeparator(c);
+        prevSep = isSeparator(c); //Check if current character is a separator
         i++;
     }
 }

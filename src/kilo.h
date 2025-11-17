@@ -26,6 +26,7 @@
 #define KILO_VERSION "0.0.1"
 #define KILO_TAB_STOP 8
 #define KILO_QUIT_TIMES 3
+#define HL_HIGHLIGHT_NUMBERS (1<<0)
 
 //data
 typedef struct erow
@@ -61,6 +62,13 @@ struct appendbuff
     int len;
 };
 
+struct editorSyntax
+{
+    char *filetype;
+    char **filematch;
+    int flags;
+};
+
 enum editorKey {
     BACKSPACE = 127,
     ARROW_UP = 1000, 
@@ -80,6 +88,7 @@ enum editorHighlight
     HL_NUMBER,
     HL_MATCH
 };
+
 
 
 //Terminals
@@ -132,13 +141,10 @@ void editorInsertChar(int c);
 void editorDeleteChar();
 void editorInsertNewLine();
 
-//Prototypes
-void editorSetStatusMessage(const char *fmt, ...); 
-void editorRefreshScreen(); 
-
 //Syntax Highlighting
 void editorUpdateSyntax(erow *row);
 int editorSyntaxToColor(int highlight);
+int isSeparator(int c);
 
 
 #endif 

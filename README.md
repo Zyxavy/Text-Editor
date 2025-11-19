@@ -30,3 +30,32 @@ Once compiled, you can run the editor with the following command:
 - This project is an implementation of the editor from the "Build Your Own Text Editor" tutorial.
 - The original kilo editor was created by antirez.
 
+## Keybind
+
+## Key Bindings
+
+Key: Ctrl-Q
+Description: Exit editor (requires multiple presses if file is modified)
+
+Key: Ctrl-S
+Description: Save file
+
+Key: Ctrl-F
+Description: Search (find) for text
+
+Key: Arrow Keys
+Description: Move cursor
+
+Key: Page Up / Down
+Description: Vertical scrolling by a screen's height
+
+Key: Home Key
+Description: Jump to start of line
+
+Key: End Key
+Description: Jump to end of line
+
+Key: Backspace/Ctrl-H
+Description: Delete character before cursor
+
+

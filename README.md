@@ -34,28 +34,20 @@ Once compiled, you can run the editor with the following command:
 
 ## Key Bindings
 
-Key: Ctrl-Q
-Description: Exit editor (requires multiple presses if file is modified)
+Key: Ctrl-Q = Exit editor (requires multiple presses if file is modified)
 
-Key: Ctrl-S
-Description: Save file
+Key: Ctrl-S = Save file
 
-Key: Ctrl-F
-Description: Search (find) for text
+Key: Ctrl-F = Search (find) for text
 
-Key: Arrow Keys
-Description: Move cursor
+Key: Arrow Keys = Move cursor
 
-Key: Page Up / Down
-Description: Vertical scrolling by a screen's height
+Key: Page Up / Down = Vertical scrolling by a screen's height
 
-Key: Home Key
-Description: Jump to start of line
+Key: Home Key = Jump to start of line
 
-Key: End Key
-Description: Jump to end of line
+Key: End Key = Jump to end of line
 
-Key: Backspace/Ctrl-H
-Description: Delete character before cursor
+Key: Backspace/Ctrl-H = Delete character before cursor
 
 

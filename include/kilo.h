@@ -27,9 +27,10 @@
 #define KILO_TAB_STOP 8
 #define KILO_QUIT_TIMES 3
 
-#define HL_HIGHLIGHT_NUMBERS (1<<0)
-#define HL_HIGHLIGHT_STRINGS (1<<1)
-#define HLDB_ENTRIES (sizeof(HLDB) / sizeof(HLDB[0]))
+//File Types
+//for C/C++
+extern char *C_HL_extension[];
+extern char *C_HL_keywords[];
 
 //data
 typedef struct erow
@@ -106,25 +107,13 @@ enum editorHighlight
     HL_MATCH
 };
 
-//File Types
+extern struct editorSyntax HLDB[];
+extern struct editorConfig E;
 
-//for C/C++
-char *C_HL_extension[] = {".c", ".h", ".cpp", ".hpp", NULL };
-char *C_HL_keywords[] = {
-  "switch", "if", "while", "for", "break", "continue", "return", "else",
-  "struct", "union", "typedef", "static", "enum", "class", "case",
-  "int|", "long|", "double|", "float|", "char|", "unsigned|", "signed|",
-  "void|", NULL
-};
+#define HL_HIGHLIGHT_NUMBERS (1<<0)
+#define HL_HIGHLIGHT_STRINGS (1<<1)
 
-struct editorSyntax HLDB[] = 
-{
-    {
-        "c", C_HL_extension, C_HL_keywords, "//", "/*", "*/", HL_HIGHLIGHT_NUMBERS | HL_HIGHLIGHT_STRINGS
-    },
-};
-
-
+extern const unsigned int HLDB_ENTRIES;
 
 //Terminals
 void enableRawMode();
@@ -182,4 +171,4 @@ int editorSyntaxToColor(int highlight);
 int isSeparator(int c);
 void editorSelectSyntaxHighlight();
 
-#endif 
+#endif /* KILO_H */

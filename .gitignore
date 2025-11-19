@@ -1,14 +1,22 @@
-# Executable files
-kilo
-
-# Object files
-*.o
-
-# Build directories
 build/
-dist/
+*.o
+*.a
+*.so
 
-# Editor backup files
-*~
+kilo
+*.exe
+*.out
+
+*.dSYM/
+*.su
+*.idb
+*.pdb
+
+.vscode/
+.idea/
 *.swp
 *.swo
+*~
+
+.DS_Store
+Thumbs.db

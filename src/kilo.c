@@ -928,12 +928,41 @@ void editorUpdateSyntax(erow *row)
     if(E.syntax == NULL) return;
 
     int prevSep = 1;
+    int inString = 0;
 
     int i = 0;
     while(i < row->rSize)
     {
         char c = row->render[i];
         unsigned char prevHL = (i > 0) ? row->highlight[i-1] : HL_NORMAL; //Get previous highlight
+
+        if(E.syntax->flags & HL_HIGHLIGHT_STRINGS) //If syntax highlighting for strings is enabled
+        {
+            if(inString) 
+            {
+                row->highlight[i] = HL_STRING;
+                if(c == '\\' && i + 1 < row->rSize) //Escape sequence
+                {
+                    row->highlight[i+1] = HL_STRING;
+                    i += 2;
+                    continue;
+                }
+                if (c == inString) inString = 0;
+                i++;
+                prevSep = 1;
+                continue;
+            }
+            else
+            {
+                if(c == '"' || c == '\'')
+                {
+                    inString = c;
+                    row->highlight[i] = HL_STRING;
+                    i++;
+                    continue;
+                }
+            }
+        }
 
         if(E.syntax->flags & HL_HIGHLIGHT_NUMBERS) //If syntax highlighting for numbers is enabled
         { 
@@ -955,6 +984,7 @@ int editorSyntaxToColor(int highlight)
 {
     switch (highlight)
     {
+        case HL_STRING: return 35;
         case HL_NUMBER: return 31;
         case HL_MATCH: return 34;
         default: return 37;
@@ -1000,3 +1030,4 @@ void editorSelectSyntaxHighlight()
     }
 }
 
+//WIP Colorful strings

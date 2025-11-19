@@ -28,6 +28,7 @@
 #define KILO_QUIT_TIMES 3
 
 #define HL_HIGHLIGHT_NUMBERS (1<<0)
+#define HL_HIGHLIGHT_STRINGS (1<<1)
 #define HLDB_ENTRIES (sizeof(HLDB) / sizeof(HLDB[0]))
 
 //data
@@ -90,6 +91,7 @@ enum editorKey {
 enum editorHighlight
 {
     HL_NORMAL = 0,
+    HL_STRING,
     HL_NUMBER,
     HL_MATCH
 };
@@ -101,7 +103,7 @@ char *C_HL_extension[] = {".c", ".h", ".cpp", ".hpp", NULL };
 struct editorSyntax HLDB[] = 
 {
     {
-        "c", C_HL_extension, HL_HIGHLIGHT_NUMBERS
+        "c", C_HL_extension, HL_HIGHLIGHT_NUMBERS | HL_HIGHLIGHT_STRINGS
     },
 };
 
@@ -162,6 +164,5 @@ void editorUpdateSyntax(erow *row);
 int editorSyntaxToColor(int highlight);
 int isSeparator(int c);
 void editorSelectSyntaxHighlight();
-
 
 #endif 

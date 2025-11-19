@@ -927,6 +927,8 @@ void editorUpdateSyntax(erow *row)
 
     if(E.syntax == NULL) return;
 
+    char **keywords = E.syntax->keywords;
+
     char *scs = E.syntax->singleLineCommentStart; 
     int scsLen = scs ? strlen(scs) : 0;
 
@@ -947,7 +949,7 @@ void editorUpdateSyntax(erow *row)
                 break;
             }
         }
-
+        
         if(E.syntax->flags & HL_HIGHLIGHT_STRINGS) //If syntax highlighting for strings is enabled
         {
             if(inString) 
@@ -978,15 +980,40 @@ void editorUpdateSyntax(erow *row)
 
         if(E.syntax->flags & HL_HIGHLIGHT_NUMBERS) //If syntax highlighting for numbers is enabled
         { 
-            if(isdigit(c) && (prevSep || prevHL == HL_NUMBER) || 
+            if((isdigit(c) && (prevSep || prevHL == HL_NUMBER)) || 
                 (c == '.' && prevHL == HL_NUMBER)) //If digit or part of a number
             {
-                row->highlight = HL_NUMBER; //Highlight numbers
+                row->highlight[i] = HL_NUMBER; //Highlight numbers
                 i++;
                 prevSep = 0;
                 continue;
             }
         }
+
+        if(prevSep)
+        {
+            int j;
+            for(j = 0; keywords[j]; j++)
+            {
+        
+                int keyLen = strlen(keywords[j]); 
+                int keyword2 = keywords[j][keyLen - 1] == '|';
+                if(keyword2) keyLen--;
+
+                if(!strncmp(&row->render[i], keywords[j], keyLen) && isSeparator(row->render[i + keyLen])) //If keyword matches and is followed by a separator
+                {
+                    memset(&row->highlight[i], keyword2 ? HL_KEYWORD2 : HL_KEYWORD1, keyLen); //Highlight keyword
+                    i += keyLen;
+                    break;
+                }
+            }
+            if(keywords[j] != NULL)
+            {
+                prevSep = 0;
+                continue;
+            }
+        }
+
         prevSep = isSeparator(c); //Check if current character is a separator
         i++;
     }
@@ -997,6 +1024,8 @@ int editorSyntaxToColor(int highlight)
     switch (highlight)
     {
         case HL_COMMENT: return 36;
+        case HL_KEYWORD1: return 33;
+        case HL_KEYWORD2: return 32;
         case HL_STRING: return 35;
         case HL_NUMBER: return 31;
         case HL_MATCH: return 34;

@@ -927,6 +927,9 @@ void editorUpdateSyntax(erow *row)
 
     if(E.syntax == NULL) return;
 
+    char *scs = E.syntax->singleLineCommentStart; 
+    int scsLen = scs ? strlen(scs) : 0;
+
     int prevSep = 1;
     int inString = 0;
 
@@ -935,6 +938,15 @@ void editorUpdateSyntax(erow *row)
     {
         char c = row->render[i];
         unsigned char prevHL = (i > 0) ? row->highlight[i-1] : HL_NORMAL; //Get previous highlight
+
+        if(scsLen && !inString) //If single line comment start is defined and not in a string
+        {
+            if(strncmp(&row->render[i], scs, scsLen))
+            {
+                memset(&row->highlight[i], HL_COMMENT, row->rSize - 1); //Highlight rest of line as comment
+                break;
+            }
+        }
 
         if(E.syntax->flags & HL_HIGHLIGHT_STRINGS) //If syntax highlighting for strings is enabled
         {
@@ -984,6 +996,7 @@ int editorSyntaxToColor(int highlight)
 {
     switch (highlight)
     {
+        case HL_COMMENT: return 36;
         case HL_STRING: return 35;
         case HL_NUMBER: return 31;
         case HL_MATCH: return 34;

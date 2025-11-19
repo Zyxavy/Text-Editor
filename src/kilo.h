@@ -72,6 +72,7 @@ struct editorSyntax
 {
     char *filetype;
     char **filematch;
+    char *singleLineCommentStart;
     int flags;
 };
 
@@ -91,6 +92,7 @@ enum editorKey {
 enum editorHighlight
 {
     HL_NORMAL = 0,
+    HL_COMMENT,
     HL_STRING,
     HL_NUMBER,
     HL_MATCH
@@ -103,7 +105,7 @@ char *C_HL_extension[] = {".c", ".h", ".cpp", ".hpp", NULL };
 struct editorSyntax HLDB[] = 
 {
     {
-        "c", C_HL_extension, HL_HIGHLIGHT_NUMBERS | HL_HIGHLIGHT_STRINGS
+        "c", C_HL_extension, "//", HL_HIGHLIGHT_NUMBERS | HL_HIGHLIGHT_STRINGS
     },
 };
 

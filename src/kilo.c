@@ -566,7 +566,7 @@ void editorStatusMessage(const char* fmt, ...)
 
 void editorDrawMessageBar(struct appendbuff *ab)
 {
-    abAppend(ab, "x1b[K", 3); //Clear message bar line
+    abAppend(ab, "\x1b[K", 3); //Clear message bar line
     int msgLen = strlen(E.statusMsg); //Get length of status message
     
     if(msgLen > E.screenCols) msgLen = E.screenCols;
@@ -588,7 +588,7 @@ void editorOpen(char *fileName)
     char *line = NULL;
     size_t lineCap = 0;
     ssize_t lineLen;
-    while ((lineLen = getline(&line, &lineCap, fp)) != 1) //Read each line
+    while ((lineLen = getline(&line, &lineCap, fp)) != -1) //Read each line
     {
         while(lineLen > 0 && (line[lineLen - 1] == '\n' || line[lineLen - 1] == '\r')) //Trim newline characters
         {
@@ -694,7 +694,10 @@ void editorFindCallback(char *query, int key)
 
     if(savedHL)
     {
-        mempcpy(&E.row[savedHLLine].highlight, savedHL, E.row[savedHLLine].rSize); //Restore previous highlight
+        erow *row = &E.row[savedHLLine];
+
+        if (row->highlight) memcpy(row->highlight, savedHL, row->rSize); //Restore previous highlight
+
         free(savedHL);
         savedHL = NULL;
     }
@@ -738,10 +741,19 @@ void editorFindCallback(char *query, int key)
             E.curX = editorRowRenderXToCurX(row, match - row->render);
             E.rowOffset = E.numRows;
 
-            savedHLLine = current;
-            savedHL = malloc(row->rSize);
-            memcpy(savedHL, row->highlight, row->rSize); //Save current highlight
-            memset(&row->highlight[match - row->render], HL_MATCH, strlen(query)); //Highlight match
+            if (row->highlight) //Save current highlight state
+            {
+                savedHLLine = current;
+                savedHL = malloc(row->rSize);
+                memcpy(savedHL, row->highlight, row->rSize);
+            }
+
+            int start = match - row->render;
+            int qlen = strlen(query);
+
+            if (start + qlen > row->rSize) qlen = row->rSize - start;  
+
+            memset(&row->highlight[start], HL_MATCH, qlen);//highlight match
             break;
         }
     }
@@ -1111,11 +1123,11 @@ void editorSelectSyntaxHighlight()
         
         while (s->filematch[j]) //For each filematch pattern
         {
-            int isExtension = (s->filematch[i][0] == '.'); //Check if pattern is an extension
+            int isExtension = (s->filematch[j][0] == '.'); //Check if pattern is an extension
 
             //Match based on extension or substring
             if((isExtension && extension && !strcmp(extension, s->filematch[i])) ||
-             (!isExtension && strstr(E.fileName, s->filematch[i])))
+             (!isExtension && strstr(E.fileName, s->filematch[j])))
             {
                 E.syntax = s;
                 

@@ -34,11 +34,13 @@
 //data
 typedef struct erow
 {
+    int index;
     int size;
     int rSize;
     char *chars;
     char *render;
     unsigned char *highlight;
+    int hlOpenComment;
 } erow;
 
 struct editorConfig
@@ -74,6 +76,8 @@ struct editorSyntax
     char **filematch;
     char **keywords;
     char *singleLineCommentStart;
+    char *multilineCommentStart;
+    char* multilineCommentEnd;
     int flags;
 };
 
@@ -94,6 +98,7 @@ enum editorHighlight
 {
     HL_NORMAL = 0,
     HL_COMMENT,
+    HL_MLCOMMENT,
     HL_KEYWORD1,
     HL_KEYWORD2,
     HL_STRING,
@@ -115,7 +120,7 @@ char *C_HL_keywords[] = {
 struct editorSyntax HLDB[] = 
 {
     {
-        "c", C_HL_extension, C_HL_keywords, "//", HL_HIGHLIGHT_NUMBERS | HL_HIGHLIGHT_STRINGS
+        "c", C_HL_extension, C_HL_keywords, "//", "/*", "*/", HL_HIGHLIGHT_NUMBERS | HL_HIGHLIGHT_STRINGS
     },
 };
 

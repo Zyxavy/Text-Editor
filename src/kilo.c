@@ -448,7 +448,21 @@ void editorDrawRows(struct appendbuff *ab)
 
             for(int j = 0; j < len; j++)
             {
-                if(highlight[j] == HL_NORMAL)
+                if(iscntrl(c[j])) //If control character
+                {
+                    char symbol = (c[j] <= 26) ? '@' + c[j] : '?';
+                    abAppend(ab, "\x1b[7m", 4);
+                    abAppend(ab, &symbol, 1);
+                    abAppend(ab, "\x1b[m", 3);
+
+                    if(curColor != -1) //Restore color
+                    {
+                        char buffer[16];
+                        int cLen = snprintf(buffer, sizeof(buffer), "\x1b[%dm", curColor);
+                        abAppend(ab, buffer, cLen);
+                    }
+                }
+                else if(highlight[j] == HL_NORMAL)
                 {
                     if(curColor != -1) //If current color is not default
                     {
@@ -742,6 +756,10 @@ void editorInsertRow(int at, char *s, size_t len)
     E.row = realloc(E.row, sizeof(erow) * (E.numRows + 1));//Resize row array to fit new row
     memmove(&E.row[at + 1], &E.row[at], sizeof(erow) * (E.numRows - at)); //Shift rows down to make space
 
+    for(int j = at + 1; j <= E.numRows; j++) E.row[j].index++; //Update row indices
+
+    E.row[at].index = at;
+
     E.row[at].size = len; //Set size of new row
     E.row[at].chars = malloc(len + 1); //Allocate memory for row characters
     memcpy(E.row[at].chars, s, len); //Copy characters into row
@@ -750,6 +768,7 @@ void editorInsertRow(int at, char *s, size_t len)
     E.row[at].rSize = 0;
     E.row[at].render = NULL;
     E.row[at].highlight = NULL;
+    E.row[at].hlOpenComment = 0;
     editorUpdateRow(&E.row[at]);
 
     E.numRows++; //Increment number of rows
@@ -851,6 +870,7 @@ void editorDeleteRow(int at)
 
     editorFreeRow(&E.row[at]);
     memmove(&E.row[at], &E.row[at + 1], sizeof(erow) * (E.numRows - at - 1)); //Shift rows up
+    for (int j = at; j < E.numRows - 1; j++) E.row[j].index--;
     E.numRows--;
     E.dirty++;
 }
@@ -930,10 +950,16 @@ void editorUpdateSyntax(erow *row)
     char **keywords = E.syntax->keywords;
 
     char *scs = E.syntax->singleLineCommentStart; 
+    char *mcs = E.syntax->multilineCommentStart;
+    char *mce = E.syntax->multilineCommentEnd;
+
     int scsLen = scs ? strlen(scs) : 0;
+    int mcsLen = mcs ? strlen(mcs) : 0;
+    int mceLen = mce ? strlen(mce) : 0;
 
     int prevSep = 1;
     int inString = 0;
+    int inComment = (row->index > 0 && E.row[row->index - 1].hlOpenComment); //Check if previous row was in multi-line comment
 
     int i = 0;
     while(i < row->rSize)
@@ -941,12 +967,40 @@ void editorUpdateSyntax(erow *row)
         char c = row->render[i];
         unsigned char prevHL = (i > 0) ? row->highlight[i-1] : HL_NORMAL; //Get previous highlight
 
-        if(scsLen && !inString) //If single line comment start is defined and not in a string
+        if(scsLen && !inString && !inComment) //If single-line comment delimiter is defined and not in string or comment
         {
             if(strncmp(&row->render[i], scs, scsLen))
             {
                 memset(&row->highlight[i], HL_COMMENT, row->rSize - 1); //Highlight rest of line as comment
                 break;
+            }
+        }
+
+        if(mcsLen && mceLen && !inString) //If multi-line comment delimiters are defined and not in a string
+        {
+            if(inComment)
+            {
+                row->highlight[i] = HL_MLCOMMENT;
+                if(!strncmp(&row->render[i], mce, mceLen)) //If end of multi-line comment found
+                {
+                    memset(&row->highlight[i], HL_MLCOMMENT, mceLen); //Highlight multi-line 
+                    i += mceLen;
+                    inComment = 0;
+                    prevSep = 1;
+                    continue;
+                }
+                else
+                {
+                    i++;
+                    continue;
+                }
+            }
+            else if(!strncmp(&row->render[i], mcs, mcsLen)) //If start of multi-line comment found
+            {
+                memset(&row->highlight[i], HL_MLCOMMENT, mcsLen);
+                i += mcsLen;
+                inComment = 1;
+                continue;
             }
         }
         
@@ -1017,12 +1071,17 @@ void editorUpdateSyntax(erow *row)
         prevSep = isSeparator(c); //Check if current character is a separator
         i++;
     }
+
+    int changed = (row->hlOpenComment != inComment); //Check if multi-line comment state changed
+    row->hlOpenComment = inComment;
+    if(changed && row->index + 1 < E.numRows) editorUpdateSyntax(&E.row[row->index + 1]); //Update next row if comment state changed
 }
 
 int editorSyntaxToColor(int highlight)
 {
     switch (highlight)
     {
+        case HL_MLCOMMENT:
         case HL_COMMENT: return 36;
         case HL_KEYWORD1: return 33;
         case HL_KEYWORD2: return 32;

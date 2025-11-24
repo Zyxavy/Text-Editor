@@ -32,6 +32,9 @@
 extern char *C_HL_extension[];
 extern char *C_HL_keywords[];
 
+extern char *PY_HL_extension[];
+extern char *PY_HL_keywords[];
+
 //data
 typedef struct erow
 {

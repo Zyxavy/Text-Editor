@@ -32,9 +32,9 @@ void editorUpdateSyntax(erow *row)
 
         if(scsLen && !inString && !inComment) //If single-line comment delimiter is defined and not in string or comment
         {
-            if(strncmp(&row->render[i], scs, scsLen))
+            if (scsLen && strncmp(&row->render[i], scs, scsLen) == 0)
             {
-                memset(&row->highlight[i], HL_COMMENT, row->rSize - 1); //Highlight rest of line as comment
+                memset(&row->highlight[i], HL_COMMENT, row->rSize - i);
                 break;
             }
         }
@@ -170,25 +170,25 @@ void editorSelectSyntaxHighlight()
     for(unsigned int i = 0; i < HLDB_ENTRIES; i++)
     {
         struct editorSyntax *s = &HLDB[i];
-        unsigned int j = 0;
-        
-        while (s->filematch[j]) //For each filematch pattern
-        {
-            int isExtension = (s->filematch[j][0] == '.'); //Check if pattern is an extension
 
-            //Match based on extension or substring
-            if((isExtension && extension && !strcmp(extension, s->filematch[i])) ||
-             (!isExtension && strstr(E.fileName, s->filematch[j])))
+        for (unsigned int j = 0; s->filematch[j]; j++) 
+        {
+            int isExtension = (s->filematch[j][0] == '.'); 
+
+            // Check for match
+            if ((isExtension && extension &&
+                 !strcmp(extension, s->filematch[j])) || 
+                (!isExtension && strstr(E.fileName, s->filematch[j])))
             {
+                // Match found
                 E.syntax = s;
-                
-                for(int filerow = 0; filerow < E.numRows; filerow++) 
+
+                for (int row = 0; row < E.numRows; row++)
                 {
-                    editorUpdateSyntax(&E.row[filerow]); //Update syntax for each row
+                    editorUpdateSyntax(&E.row[row]);
                 }
                 return;
             }
-            j++;
         }
         
     }

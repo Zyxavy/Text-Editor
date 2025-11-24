@@ -1,5 +1,6 @@
 #include "kilo.h"
 
+//C / C++
 char *C_HL_extension[] = {".c", ".h", ".cpp", ".hpp", NULL };
 char *C_HL_keywords[] = 
 {
@@ -13,6 +14,43 @@ struct editorSyntax HLDB[] =
     {
         "c", C_HL_extension, C_HL_keywords, "//", "/*", "*/", HL_HIGHLIGHT_NUMBERS | HL_HIGHLIGHT_STRINGS
     },
+    {
+        "py", PY_HL_extension, PY_HL_keywords, "#", "''", "''", HL_HIGHLIGHT_NUMBERS | HL_HIGHLIGHT_STRINGS
+    },
+};
+
+//Python
+char *PY_HL_extension[] = {".py", NULL };
+char *PY_HL_keywords[] = 
+{
+  // Keywords
+  "False", "None", "True",
+  "and", "as", "assert",
+  "async", "await",
+  "break", "class", "continue",
+  "def", "del",
+  "elif", "else", "except",
+  "finally", "for", "from",
+  "global",
+  "if", "import", "in", "is",
+  "lambda",
+  "nonlocal", "not",
+  "or",
+  "pass",
+  "raise", "return",
+  "try",
+  "while", "with", "yield",
+
+  // Common builtins/types (with | suffix to mark types)
+  "self",
+  "__init__",
+  "print",
+  "range",
+  "len",
+  "str|", "int|", "float|", "bool|",
+  "list|", "dict|", "set|", "tuple|", "object|",
+
+  NULL
 };
 
 struct editorConfig E;

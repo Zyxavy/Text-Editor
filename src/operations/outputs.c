@@ -15,7 +15,17 @@ void editorRefreshScreen()
     editorDrawMessageBar(&ab); //Draw message bar
 
     char buffer[32];
-    snprintf(buffer, sizeof(buffer), "\x1b[%d;%dH", (E.curY - E.rowOffset) + 1, (E.renderX - E.colOffset) + 1); //Reposition cursor
+
+    if(E.syntax) //If syntax highlighting is enabled
+    {
+        int lineNumWidth = 7;
+        snprintf(buffer, sizeof(buffer), "\x1b[%d;%dH", (E.curY - E.rowOffset) + 1, (E.renderX - E.colOffset) + lineNumWidth + 1); //Reposition cursor
+    }
+    else
+    {
+       snprintf(buffer, sizeof(buffer), "\x1b[%d;%dH", (E.curY - E.rowOffset) + 1, (E.renderX - E.colOffset) + 1); //Reposition cursor 
+    }
+    
     abAppend(&ab, buffer, strlen(buffer)); //Append cursor position command
 
     abAppend(&ab, "\x1b[?25h", 6);
@@ -42,7 +52,7 @@ void editorDrawRows(struct appendbuff *ab)
 
                 if(padding) //Add '>' before welcome message
                 {
-                    abAppend(ab, ">", 1); 
+                    abAppend(ab, ">", 1);
                     padding--;
                 }
                 while(padding--) abAppend(ab, " ", 1); //Add left padding
@@ -56,6 +66,13 @@ void editorDrawRows(struct appendbuff *ab)
         }
         else
         {
+            if(E.syntax)
+            {
+                char buffer[16];
+                int numLen = snprintf(buffer, sizeof(buffer), "%3d.   ", fileRow + 1);
+                abAppend(ab, buffer, numLen); 
+            }
+
             int len = E.row[fileRow].rSize - E.colOffset; //Calculate length to render
             if(len < 0) len = 0;
             if(len > E.screenCols) len = E.screenCols;
@@ -63,6 +80,7 @@ void editorDrawRows(struct appendbuff *ab)
             char *c = &E.row[fileRow].render[E.colOffset]; //Get pointer to start of render
             unsigned char *highlight = &E.row[fileRow].highlight[E.colOffset];//Get pointer to highlight
             int curColor = -1;
+
 
             for(int j = 0; j < len; j++)
             {
